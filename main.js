@@ -53,7 +53,8 @@ class Particle {
 			href: this.imageURL,
 		});
 		//add a clip path to this? 
-		this.clipPathEl = createNode('clipPath', { id: "circle-clip" });
+		this.clipPathID = "circle-clip" + particles.length;
+		this.clipPathEl = createNode('clipPath', { id: this.clipPathID});
 		this.clipCircle = createNode('circle', {
 			cx: this.x,
 			cy: this.y,
@@ -61,7 +62,7 @@ class Particle {
 		});
 		this.clipPathEl.appendChild(this.clipCircle);
 		svg.appendChild(this.clipPathEl);
-		this.imageEl.setAttribute('clip-path', 'url(#circle-clip)');
+		this.imageEl.setAttribute('clip-path', 'url(#'+this.clipPathID+")");
 		svg.appendChild(this.imageEl);
 		// vector
 		this.vx = random(-10, 10) / 5;
