@@ -255,12 +255,29 @@ document.getElementById("generateArtist").addEventListener("click", generateArti
 /*
 	same windows issue as last time bruh bruh
 */
+
+
 async function generateArtist(){
-	var link = 'http://127.0.0.1:5000/getArtists'; //rn i dont think we are going to this link
-	const responseArtist = await fetch(link);
-	const textArtist = await responseArtist.text();
-	console.log(textArtist);
+	// var link = 'http://127.0.0.1:5000/getArtists'; //rn i dont think we are going to this link
+	// const responseArtist = await fetch(link);
+	// const textArtist = await responseArtist.text();
+	// console.log(textArtist);
+	
 	// return textArtist;
+}
+function removeNode(obj){
+	svg.removeChild(obj);
+}
+function removeParticles(num){//removes num smallest particles
+	for(let i = 0; i<num; i++){
+		if(particles.length ===0) break;
+		var obj = particles.pop();
+		removeNode(obj.imageEl);
+		removeNode(obj.clipPathEl);
+		removeNode(obj.textEl);
+		removeNode(obj.overlayEl);
+		removeNode(obj.el);
+	}
 }
 const img = new Image();
 img.onload = () => {
@@ -279,8 +296,8 @@ const loop = () => {
 	height = window.innerHeight;
 	setSvgSize(width, height);
 	// looping through particles checking for collisions and updating pos
-	for (let i = 0; i < maxParticles; i++) {
-		for (let n = i + 1; n < maxParticles; n++) {
+	for (let i = 0; i < particles.length; i++) {
+		for (let n = i + 1; n < particles.length; n++) {
 			particles[i].checkForIntercept(particles[n])
 		}
 		particles[i].update();
