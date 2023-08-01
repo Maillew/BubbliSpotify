@@ -24,19 +24,67 @@ const createNode = (n, attrs) => {
 
 // particle constructor
 
-let gravity = false;
+let mouseDown = false;
+let mouseX = 0;
+let mouseY = 0;
+const dragVelocityFactor = 0.005;
+
+svg.addEventListener('mousedown', (e) => {
+	mouseDown = true;
+	mouseX = e.clientX;
+	mouseY = e.clientY;
+
+	// Check if any particle is clicked and set its 'isClicked' flag.
+	particles.forEach((particle) => {
+		const dx = particle.x - e.clientX;
+		const dy = particle.y - e.clientY;
+		if (Math.sqrt(dx * dx + dy * dy) <= particle.r) {
+			particle.isClicked = true;
+		}
+		else {
+			particle.isClicked = false;
+		}
+	});
+});
+  
+svg.addEventListener('mouseup', () => {
+	mouseDown = false;
+
+	// Reset 'isClicked' flag for all particles when the mouse is released.
+	particles.forEach((particle) => {
+		particle.isClicked = false;
+	});
+});
+
+svg.addEventListener('mousemove', (e) => {
+	if (mouseDown) {
+		const deltaX = e.clientX - mouseX;
+		const deltaY = e.clientY - mouseY;
+		particles.forEach((particle) => {
+		if (particle.isClicked) {
+			particle.vx += deltaX * dragVelocityFactor;
+			particle.vy += deltaY * dragVelocityFactor;
+		}
+		});
+
+		mouseX = e.clientX;
+		mouseY = e.clientY;
+	}
+});
 
 function random(lb, ub){
   return Math.random()*(ub-lb)+lb;
 }
 class Particle {
-	constructor(radius, imageURL) {
+	constructor(radius, imageURL, text) {
+		this.isClicked = false;
 		this.r = radius; // can adjust these values later
 		this.d = this. r * 2;
 		this.imageURL = imageURL;
 		this.x = random(this.r, width - this.d);
 		this.y = random(this.r, height - this.d);
 		this.col = '#F15025';
+		this.text = text;
 		this.mass = 10 * this.r;
 		// create el
 		this.el = createNode('circle', {
@@ -45,6 +93,20 @@ class Particle {
 			r: this.r, 
 			fill: "url(#"+this.imageURL +")",
 		});
+		
+		this.el.addEventListener('mousedown', (e) => {
+			mouseDown = true;
+			mouseX = e.clientX;
+			mouseY = e.clientY;
+			this.isClicked = true; 
+		});
+	  
+		  // Add a mouseup event listener to the particle's <circle> element
+		this.el.addEventListener('mouseup', () => {
+			mouseDown = false;
+			this.isClicked = false; 
+		});
+
 		this.imageEl = createNode('image', {
 			x: this.x - this.r,
 			y: this.y - this.r,
@@ -69,6 +131,26 @@ class Particle {
 		this.vy = random(-10, 10) / 5;
 		// this.vx = 0;
 		// this.vy = 0;
+		this.overlayEl = createNode('circle', {
+			cx: this.x,
+			cy: this.y,
+			r: this.r,
+			fill: 'transparent', // Make the overlay transparent
+			class: 'hover-overlay', // Add a class for styling if needed
+		});
+		svg.appendChild(this.overlayEl);
+		this.textEl = createNode('text',{
+			x: this.x+this.r,
+			y: this.y+this.r,
+			'text-anchor': 'middle',
+			'alignment-baseline': 'middle',
+			fill: '#ffffff',
+			'font-size': this.r/3,
+			'font-family': "Poppins, sans-serif",
+			class: 'unselectable'
+		});
+		this.textEl.textContent = this.text;
+		svg.appendChild(this.textEl);
 	}
 	draw() {
 		this.el.setAttribute('cx', this.x);
@@ -84,6 +166,10 @@ class Particle {
 
 		this.clipPathEl.setAttribute('x', imageX);
 		this.clipPathEl.setAttribute('y', imageY);
+		this.textEl.setAttribute('x', this.x);
+		this.textEl.setAttribute('y', this.y);
+		this.overlayEl.setAttribute('cx', this.x);
+    	this.overlayEl.setAttribute('cy', this.y);
 		this.collision = false;
 	}
 	update() {
@@ -138,9 +224,7 @@ class Particle {
 		
 		
 		if (collision) {
-			
 			let theta = -Math.atan2(b.y - this.y, b.x - this.x);
-			
 			let rx = (dis - r_combined) * Math.cos(theta) / 2,
 				 ry = (dis - r_combined) * Math.sin(theta) / 2;
 			
@@ -165,13 +249,23 @@ class Particle {
 // create particles
 let particles = [];
 let maxParticles = 10;
-let bigRadius = 100;
 
-let testURL = "https://charts-static.billboard.com/img/2019/11/keshi-95t-344x344.jpg";
+document.getElementById("generateArtist").addEventListener("click", generateArtist, false);
+
+/*
+	same windows issue as last time bruh bruh
+*/
+async function generateArtist(){
+	var link = 'http://127.0.0.1:5000/getArtists'; //rn i dont think we are going to this link
+	const responseArtist = await fetch(link);
+	const textArtist = await responseArtist.text();
+	console.log(textArtist);
+	// return textArtist;
+}
 const img = new Image();
 img.onload = () => {
   for (let i = 0; i < maxParticles; i++) {
-    particles.push(new Particle(100 / Math.sqrt(i + 1), img.src));
+    particles.push(new Particle((width/10) / Math.sqrt(i + 1), img.src, "Keshi"));
   }
   loop();
 };
