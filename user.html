@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+    <html lang = "en">
+    <head>
+        <meta charset ="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content = "IE=edge">
+        <meta name="viewport" content = "width=device-width, intial-scale = 1.0">
+        <link rel="icon" type="image/svg+xml" href="/vite.svg" /> <!--logo-->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400&display=swap" rel="stylesheet">
+        <title> Bubbli</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+        <link rel = "stylesheet" href = "style.css">
+        <script type="module" src="/main.js"></script>
+    </head> 
+    <body>
+        <nav>
+            <h1>Bubbli</h1>
+            <ul class = "nav navbar-nav">
+                <button onclick = "location.href = '/user.html'" type = "button" class = "btn btn-default" id = "navButton"> Your User</button>
+                <button onclick = "location.href = '/share.html'" type = "button" class = "btn btn-default" id = "navButton"> Share Results</button>
+                <button onclick = "location.href = '/user.html'" type = "button" class = "btn btn-default" id = "signInButton"> Sign In</button>
+            </ul>
+        </nav>
+        <ul class = "topSelect">
+            <button type = "button" class = "btn btn-default shadow-none" id = "trackButton"> Top Tracks </button>
+            <button type = "button" class = "btn btn-default shadow-none" id = "artistButton"> Top Artists</button>
+        </ul>
+        <ul class = "numSelect">
+            <button type = "button" class = "btn btn-default shadow-none" id = "button5"> Top 5 </button>
+            <button type = "button" class = "btn btn-default shadow-none" id = "button10"> Top 10</button>
+            <button type = "button" class = "btn btn-default shadow-none" id = "button20"> Top 20</button>
+
+        </ul>
+        <div class = "balls">
+            <div id="app"></div>
+            <svg id="svg" width = "100%" height = "100%" xmlns="http://www.w3.org/2000/svg">
+            </svg>
+        </div>
+    </body>
+</html>
