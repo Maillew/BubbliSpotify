@@ -2,6 +2,7 @@ import './style.css'
 // view dimensions
 
 let height = window.innerHeight, width = window.innerWidth;
+const clientId = "CLIENT ID"; // Replace with your client id
 
 // set up svg width
 
@@ -27,7 +28,7 @@ const createNode = (n, attrs) => {
 let mouseDown = false;
 let mouseX = 0;
 let mouseY = 0;
-const dragVelocityFactor = 0.005;
+const dragVelocityFactor = 0.001;
 
 svg.addEventListener('mousedown', (e) => {
 	mouseDown = true;
@@ -75,6 +76,7 @@ svg.addEventListener('mousemove', (e) => {
 function random(lb, ub){
   return Math.random()*(ub-lb)+lb;
 }
+let imageScale = 1.2;
 class Particle {
 	constructor(radius, imageURL, text) {
 		this.isClicked = false;
@@ -85,7 +87,8 @@ class Particle {
 		this.y = random(this.r, height - this.d);
 		this.col = '#F15025';
 		this.text = text;
-		this.mass = 10 * this.r;
+		this.mass = this.r;
+		this.fontsize = 2.5*this.r/this.text.length;
 		// create el
 		this.el = createNode('circle', {
 			cx: this.x,
@@ -108,11 +111,11 @@ class Particle {
 		});
 
 		this.imageEl = createNode('image', {
-			x: this.x - this.r,
-			y: this.y - this.r,
-			width: this.r * 2,
-			height: this.r * 2,
-			href: this.imageURL,
+			width: this.r * 2 * imageScale,
+			height: this.r * 2 * imageScale,
+			x: this.x - this.r * imageScale,
+			y: this.y - this.r * imageScale,
+			href: this.imageURL
 		});
 		//add a clip path to this? 
 		this.clipPathID = "circle-clip" + particles.length;
@@ -127,8 +130,8 @@ class Particle {
 		this.imageEl.setAttribute('clip-path', 'url(#'+this.clipPathID+")");
 		svg.appendChild(this.imageEl);
 		// vector
-		this.vx = random(-10, 10) / 5;
-		this.vy = random(-10, 10) / 5;
+		this.vx = random(-5, 5) / 5;
+		this.vy = random(-5, 5) / 5;
 		// this.vx = 0;
 		// this.vy = 0;
 		this.overlayEl = createNode('circle', {
@@ -140,12 +143,15 @@ class Particle {
 		});
 		svg.appendChild(this.overlayEl);
 		this.textEl = createNode('text',{
-			x: this.x+this.r,
-			y: this.y+this.r,
+			x: this.x,
+			y: this.y,
 			'text-anchor': 'middle',
 			'alignment-baseline': 'middle',
-			fill: '#ffffff',
-			'font-size': this.r/3,
+			stroke: '#000000',
+			'stroke-width': this.r/(20*this.text.length),
+			fill: '#000000',
+			// 'font-weight': 'bolder',
+			'font-size': this.fontsize,
 			'font-family': "Poppins, sans-serif",
 			class: 'unselectable'
 		});
@@ -155,10 +161,10 @@ class Particle {
 	draw() {
 		this.el.setAttribute('cx', this.x);
 		this.el.setAttribute('cy', this.y);
-		this.el.setAttribute('fill', this.collision ? '#F47F60' : "url(#" + this.imageURL + ") translate(" + this.x + "," + this.y + ")");
+		this.el.setAttribute('fill', this.collision ? '#000000' : "url(#" + this.imageURL + ") translate(" + this.x + "," + this.y + ")");
 		
-		const imageX = this.x - this.r;
-		const imageY = this.y - this.r;
+		const imageX = this.x - this.r * imageScale;
+		const imageY = this.y - this.r * imageScale;
 		this.imageEl.setAttribute('x', imageX);
 		this.imageEl.setAttribute('y', imageY);
 		this.clipCircle.setAttribute('cx', this.x);
@@ -167,7 +173,7 @@ class Particle {
 		this.clipPathEl.setAttribute('x', imageX);
 		this.clipPathEl.setAttribute('y', imageY);
 		this.textEl.setAttribute('x', this.x);
-		this.textEl.setAttribute('y', this.y);
+		this.textEl.setAttribute('y', this.y + this.r + 0.6 * this.fontsize);
 		this.overlayEl.setAttribute('cx', this.x);
     	this.overlayEl.setAttribute('cy', this.y);
 		this.collision = false;
@@ -248,45 +254,154 @@ class Particle {
 
 // create particles
 let particles = [];
-let maxParticles = 10;
 
-document.getElementById("generateArtist").addEventListener("click", generateArtist, false);
+//// api shenanigans
+const params = new URLSearchParams(window.location.search);
+const code = params.get("code");
+var trackImages = [];
+var trackNames = [];
+var artistImages = [];
+var artistNames = [];
 
-/*
-	same windows issue as last time bruh bruh
-*/
-
-
-async function generateArtist(){
-	// var link = 'http://127.0.0.1:5000/getArtists'; //rn i dont think we are going to this link
-	// const responseArtist = await fetch(link);
-	// const textArtist = await responseArtist.text();
-	// console.log(textArtist);
-	
-	// return textArtist;
+if (!code) {
+    redirectToAuthCodeFlow(clientId);
+} else {
+    const accessToken = await getAccessToken(clientId, code);
+    const tracks = await fetchTracks(accessToken);
+    const artists = await fetchArtists(accessToken);
+	initTracks(tracks);
+	initArtists(artists);
 }
+
+export async function redirectToAuthCodeFlow(clientId) {
+    const verifier = generateCodeVerifier(128);
+    const challenge = await generateCodeChallenge(verifier);
+
+    localStorage.setItem("verifier", verifier);
+
+    const params = new URLSearchParams();
+    params.append("client_id", clientId);
+    params.append("response_type", "code");
+    params.append("redirect_uri", "http://localhost:5173/callback");
+    params.append("scope", "user-read-private user-read-email user-top-read");
+    params.append("code_challenge_method", "S256");
+    params.append("code_challenge", challenge);
+
+    document.location = `https://accounts.spotify.com/authorize?${params.toString()}`;
+}
+
+function generateCodeVerifier(length) {
+    let text = '';
+    let possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+    for (let i = 0; i < length; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
+
+async function generateCodeChallenge(codeVerifier) {
+    const data = new TextEncoder().encode(codeVerifier);
+    const digest = await window.crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
+
+export async function getAccessToken(clientId, code) {
+    const verifier = localStorage.getItem("verifier");
+
+    const params = new URLSearchParams();
+    params.append("client_id", clientId);
+    params.append("grant_type", "authorization_code");
+    params.append("code", code);
+    params.append("redirect_uri", "http://localhost:5173/callback");
+    params.append("code_verifier", verifier);
+
+    const result = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params
+    });
+
+    const { access_token } = await result.json();
+    return access_token;
+}
+
+async function fetchTracks(token) {
+    const result = await fetch("https://api.spotify.com/v1/me/top/tracks", {
+        method: "GET", headers: { Authorization: `Bearer ${token}` }
+    });
+
+    return await result.json();
+}
+async function fetchArtists(token) {
+    const result = await fetch("https://api.spotify.com/v1/me/top/artists", {
+        method: "GET", headers: { Authorization: `Bearer ${token}` }
+    });
+
+    return await result.json();
+}
+
+function initTracks(profile) {
+    console.log(profile);
+	for(let i =0; i<20; i++) addTrack(profile);
+}
+
+function addTrack(profile){
+	var url = profile.items[trackImages.length].album.images[0].url;
+	var name = profile.items[trackImages.length].name;
+
+	var img = new Image();
+	img.src = url;
+	trackImages.push(img);
+	trackNames.push(name);
+}
+
+function initArtists(profile) {
+    console.log(profile);
+	for(let i =0; i<20; i++) addArtist(profile);
+}
+
+function addArtist(profile){
+	var url = profile.items[artistImages.length].images[0].url;
+	var name = profile.items[artistImages.length].name;
+
+	var img = new Image();
+	img.src = url;
+	artistImages.push(img);
+	artistNames.push(name);
+}
+
+for(let j =0; j<1; j++){
+	artistImages[j].onload = () => {
+		particles.push(new Particle((width/10) / Math.sqrt(j + 1), artistImages[j].src, artistNames[j]));
+		loop();
+	};
+}
+
+document.getElementById("generateArtist").addEventListener("click", addParticle, false);
+
 function removeNode(obj){
 	svg.removeChild(obj);
 }
-function removeParticles(num){//removes num smallest particles
-	for(let i = 0; i<num; i++){
-		if(particles.length ===0) break;
-		var obj = particles.pop();
-		removeNode(obj.imageEl);
-		removeNode(obj.clipPathEl);
-		removeNode(obj.textEl);
-		removeNode(obj.overlayEl);
-		removeNode(obj.el);
-	}
+function removeParticle(){//removes num smallest particles
+	if(particles.length ===0) return;
+	var obj = particles.pop();
+	removeNode(obj.imageEl);
+	removeNode(obj.clipPathEl);
+	removeNode(obj.textEl);
+	removeNode(obj.overlayEl);
+	removeNode(obj.el);
 }
-const img = new Image();
-img.onload = () => {
-  for (let i = 0; i < maxParticles; i++) {
-    particles.push(new Particle((width/10) / Math.sqrt(i + 1), img.src, "Keshi"));
-  }
-  loop();
-};
-img.src = "https://charts-static.billboard.com/img/2019/11/keshi-95t-344x344.jpg";
+function addParticle(){//adds next num largest particles
+	particles.push(new Particle((width/10) / Math.sqrt(particles.length + 1), artistImages[particles.length].src, artistNames[particles.length]));
+}
+function adjustSize(sz){
+	while(particles.length > sz) removeParticle();
+	while(particles.length < sz) addParticle();
+}
 
 // animation loop
 
