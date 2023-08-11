@@ -1,11 +1,13 @@
 import './style.css'
-// view dimensions
 
-let height = window.innerHeight, width = window.innerWidth;
-const clientId = "CLIENT ID"; // Replace with your client id
+var script = document.createElement('script');
+script.src = 'https://code.jquery.com/jquery-3.6.3.min.js';
+document.getElementsByTagName('head')[0].appendChild(script);
+
+const clientId = "b86a837e66bf413f9e5dfe56b233e1e3"; // Replace with your client id
 
 // set up svg width
-
+let height = document.getElementById('svg').clientHeight, width = document.getElementById('svg').clientWidth;
 let svg = document.getElementById('svg');
 const setSvgSize = (w, h) => {
 	svg.setAttribute('width', width);
@@ -24,51 +26,94 @@ const createNode = (n, attrs) => {
 };
 
 // particle constructor
-
+var currentType = "track";
+var currentSize = 5;
 let mouseDown = false;
 let mouseX = 0;
 let mouseY = 0;
-const dragVelocityFactor = 0.001;
+const dragVelocityFactor = 0.005;
+
+/*
+	ok i think i know the issue:
+		the mouse click is with respect to the whole page
+		but the coordinate of the particles is with respect to the svg
+
+	i think what we do is get the coord of the top left corner of the container?
+*/
 
 svg.addEventListener('mousedown', (e) => {
 	mouseDown = true;
-	mouseX = e.clientX;
+	var offset = $('svg').offset();
+	mouseX = e.clientX; 
 	mouseY = e.clientY;
-
 	// Check if any particle is clicked and set its 'isClicked' flag.
-	particles.forEach((particle) => {
-		const dx = particle.x - e.clientX;
-		const dy = particle.y - e.clientY;
-		if (Math.sqrt(dx * dx + dy * dy) <= particle.r) {
-			particle.isClicked = true;
-		}
-		else {
-			particle.isClicked = false;
-		}
-	});
+	console.log(mouseX,mouseY);
+	if(currentType ==="track"){
+		trackParticles.forEach((particle) => {
+			const dx = particle.x - mouseX + offset.left;
+			const dy = particle.y - mouseY + offset.top;
+			if (Math.sqrt(dx * dx + dy * dy) <= particle.r) {
+				particle.isClicked = true;
+			}
+			else {
+				particle.isClicked = false;
+			}
+		});
+	}
+	else{
+		artistParticles.forEach((particle) => {
+			const dx = particle.x - mouseX + offset.left;
+			const dy = particle.y - mouseY + offset.top;
+			if (Math.sqrt(dx * dx + dy * dy) <= particle.r) {
+				particle.isClicked = true;
+			}
+			else {
+				particle.isClicked = false;
+			}
+		});
+	}
+	
 });
   
 svg.addEventListener('mouseup', () => {
 	mouseDown = false;
 
 	// Reset 'isClicked' flag for all particles when the mouse is released.
-	particles.forEach((particle) => {
-		particle.isClicked = false;
-	});
+	if(currentType === "track"){
+		trackParticles.forEach((particle) => {
+			particle.isClicked = false;
+		});
+	}
+	else{
+		artistParticles.forEach((particle) => {
+			particle.isClicked = false;
+		});
+	}
+	
 });
 
 svg.addEventListener('mousemove', (e) => {
 	if (mouseDown) {
 		const deltaX = e.clientX - mouseX;
 		const deltaY = e.clientY - mouseY;
-		particles.forEach((particle) => {
-		if (particle.isClicked) {
-			particle.vx += deltaX * dragVelocityFactor;
-			particle.vy += deltaY * dragVelocityFactor;
+		if(currentType ==="track"){
+			trackParticles.forEach((particle) => {
+				if (particle.isClicked) {
+					particle.vx += deltaX * dragVelocityFactor;
+					particle.vy += deltaY * dragVelocityFactor;
+				}
+			});
 		}
-		});
-
-		mouseX = e.clientX;
+		else{
+			artistParticles.forEach((particle) => {
+				if (particle.isClicked) {
+					particle.vx += deltaX * dragVelocityFactor;
+					particle.vy += deltaY * dragVelocityFactor;
+				}
+			});
+		}
+		var offset = $('svg').offset();
+		mouseX = e.clientX; 
 		mouseY = e.clientY;
 	}
 });
@@ -78,7 +123,7 @@ function random(lb, ub){
 }
 let imageScale = 1.2;
 class Particle {
-	constructor(radius, imageURL, text) {
+	constructor(radius, imageURL, text, type) {
 		this.isClicked = false;
 		this.r = radius; // can adjust these values later
 		this.d = this. r * 2;
@@ -88,7 +133,8 @@ class Particle {
 		this.col = '#F15025';
 		this.text = text;
 		this.mass = this.r;
-		this.fontsize = 2.5*this.r/this.text.length;
+		this.fontsize = Math.max(10, 2.5*this.r/this.text.length);
+		this.type = type;
 		// create el
 		this.el = createNode('circle', {
 			cx: this.x,
@@ -118,7 +164,8 @@ class Particle {
 			href: this.imageURL
 		});
 		//add a clip path to this? 
-		this.clipPathID = "circle-clip" + particles.length;
+		if(this.type === "track") this.clipPathID = "circle-clip" + trackParticles.length;
+		else this.clipPathID = "circle-clip" + artistParticles.length;
 		this.clipPathEl = createNode('clipPath', { id: this.clipPathID});
 		this.clipCircle = createNode('circle', {
 			cx: this.x,
@@ -144,7 +191,7 @@ class Particle {
 		svg.appendChild(this.overlayEl);
 		this.textEl = createNode('text',{
 			x: this.x,
-			y: this.y,
+			y: this.y + this.r + 0.6 * this.fontsize,
 			'text-anchor': 'middle',
 			'alignment-baseline': 'middle',
 			stroke: '#000000',
@@ -159,23 +206,35 @@ class Particle {
 		svg.appendChild(this.textEl);
 	}
 	draw() {
+		if(this.isClicked) console.log(this.text);
+		this.fontsize = Math.max(10, 2.5*this.r/this.text.length);
 		this.el.setAttribute('cx', this.x);
 		this.el.setAttribute('cy', this.y);
+		this.el.setAttribute('r', this.r);
 		this.el.setAttribute('fill', this.collision ? '#000000' : "url(#" + this.imageURL + ") translate(" + this.x + "," + this.y + ")");
 		
 		const imageX = this.x - this.r * imageScale;
 		const imageY = this.y - this.r * imageScale;
 		this.imageEl.setAttribute('x', imageX);
 		this.imageEl.setAttribute('y', imageY);
+		this.imageEl.setAttribute('width', this.r * 2 * imageScale);
+		this.imageEl.setAttribute('height', this.r * 2 * imageScale);
+		this.imageEl.setAttribute('href', this.imageURL);
+		
+
+		this.clipCircle.setAttribute('r',this.r);
 		this.clipCircle.setAttribute('cx', this.x);
 		this.clipCircle.setAttribute('cy', this.y);
 
 		this.clipPathEl.setAttribute('x', imageX);
 		this.clipPathEl.setAttribute('y', imageY);
+
 		this.textEl.setAttribute('x', this.x);
 		this.textEl.setAttribute('y', this.y + this.r + 0.6 * this.fontsize);
+		this.textEl.setAttribute('font-size', this.fontsize);
 		this.overlayEl.setAttribute('cx', this.x);
     	this.overlayEl.setAttribute('cy', this.y);
+		this.overlayEl.setAttribute('r', this.r);
 		this.collision = false;
 	}
 	update() {
@@ -186,12 +245,12 @@ class Particle {
 			this.x = this.x <= this.r ? this.r : width - this.r;
 			this.vx *= -1;
 		}
-		if (this.y <= this.r || this.y + this.r > height) {
-			this.y = this.y <= this.r ? this.r : height - this.r;
+		if (this.y <= this.r || this.y + this.r + this.fontsize > height) {
+			this.y = this.y <= this.r ? this.r : height - this.r - this.fontsize;
 			this.vy *= -1;
 		}
-		this.imageEl.setAttribute('x', this.x - this.r);
-    	this.imageEl.setAttribute('y', this.y - this.r);
+		this.imageEl.setAttribute('x', this.x - this.r * imageScale);
+    	this.imageEl.setAttribute('y', this.y - this.r * imageScale);
 		this.clipPathEl.setAttribute('x', this.x - this.r);
 		this.clipPathEl.setAttribute('y', this.y - this.r);
 		// update pos
@@ -253,7 +312,9 @@ class Particle {
 
 
 // create particles
-let particles = [];
+let trackParticles = [];
+let artistParticles = [];
+
 
 //// api shenanigans
 const params = new URLSearchParams(window.location.search);
@@ -282,7 +343,7 @@ export async function redirectToAuthCodeFlow(clientId) {
     const params = new URLSearchParams();
     params.append("client_id", clientId);
     params.append("response_type", "code");
-    params.append("redirect_uri", "http://localhost:5173/callback");
+    params.append("redirect_uri", "http://localhost:5173/user.html");
     params.append("scope", "user-read-private user-read-email user-top-read");
     params.append("code_challenge_method", "S256");
     params.append("code_challenge", challenge);
@@ -316,7 +377,7 @@ export async function getAccessToken(clientId, code) {
     params.append("client_id", clientId);
     params.append("grant_type", "authorization_code");
     params.append("code", code);
-    params.append("redirect_uri", "http://localhost:5173/callback");
+    params.append("redirect_uri", "http://localhost:5173/user.html");
     params.append("code_verifier", verifier);
 
     const result = await fetch("https://accounts.spotify.com/api/token", {
@@ -351,8 +412,16 @@ function initTracks(profile) {
 
 function addTrack(profile){
 	var url = profile.items[trackImages.length].album.images[0].url;
-	var name = profile.items[trackImages.length].name;
 
+	var name = profile.items[trackImages.length].name;
+	//trim the track name
+		//if it has brackets (with) or (feat.) we can trim
+	for(let i =1; i<name.length; i++){
+		if(name[i] === '('){
+			name = name.substring(0,i-1);
+		}
+	}
+	name = "#" + (trackImages.length+1) + " " + name;
 	var img = new Image();
 	img.src = url;
 	trackImages.push(img);
@@ -367,6 +436,7 @@ function initArtists(profile) {
 function addArtist(profile){
 	var url = profile.items[artistImages.length].images[0].url;
 	var name = profile.items[artistImages.length].name;
+	name = "#" + (artistImages.length+1) + " " + name;
 
 	var img = new Image();
 	img.src = url;
@@ -374,53 +444,128 @@ function addArtist(profile){
 	artistNames.push(name);
 }
 
-for(let j =0; j<1; j++){
-	artistImages[j].onload = () => {
-		particles.push(new Particle((width/10) / Math.sqrt(j + 1), artistImages[j].src, artistNames[j]));
-		loop();
-	};
-}
-
-document.getElementById("generateArtist").addEventListener("click", addParticle, false);
-
 function removeNode(obj){
 	svg.removeChild(obj);
 }
-function removeParticle(){//removes num smallest particles
-	if(particles.length ===0) return;
-	var obj = particles.pop();
-	removeNode(obj.imageEl);
-	removeNode(obj.clipPathEl);
-	removeNode(obj.textEl);
-	removeNode(obj.overlayEl);
-	removeNode(obj.el);
+function removeParticle(type){//removes num smallest particles
+	if(type === "track"){
+		if(trackParticles.length ===0) return;
+		var obj = trackParticles.pop();
+		removeNode(obj.imageEl);
+		removeNode(obj.clipPathEl);
+		removeNode(obj.textEl);
+		removeNode(obj.overlayEl);
+		removeNode(obj.el);
+	}
+	else{
+		if(artistParticles.length ===0) return;
+		var obj = artistParticles.pop();
+		removeNode(obj.imageEl);
+		removeNode(obj.clipPathEl);
+		removeNode(obj.textEl);
+		removeNode(obj.overlayEl);
+		removeNode(obj.el);
+	}
 }
-function addParticle(){//adds next num largest particles
-	particles.push(new Particle((width/10) / Math.sqrt(particles.length + 1), artistImages[particles.length].src, artistNames[particles.length]));
+function addParticle(type){//adds next num largest particles
+	if(type ==="track") trackParticles.push(new Particle((width/10) / Math.sqrt(trackParticles.length + 1), trackImages[trackParticles.length].src, trackNames[trackParticles.length], "track"));
+	else artistParticles.push(new Particle((width/10) / Math.sqrt(artistParticles.length + 1), artistImages[artistParticles.length].src, artistNames[artistParticles.length], "artist"));
 }
-function adjustSize(sz){
-	while(particles.length > sz) removeParticle();
-	while(particles.length < sz) addParticle();
+function adjustSize(sz, type){
+	if(type === "track"){
+		while(trackParticles.length > sz) removeParticle(type);
+		while(trackParticles.length < sz) addParticle(type);
+	}
+	else{
+		while(artistParticles.length > sz) removeParticle(type);
+		while(artistParticles.length < sz) addParticle(type);
+	}
 }
 
 // animation loop
 
+const trackButton = document.getElementById("trackButton");
+const artistButton = document.getElementById("artistButton");
+
+
+trackButton.addEventListener("click", () => {
+    trackButton.classList.add("active");
+    artistButton.classList.remove("active");
+	adjustSize(0,currentType);
+	currentType = "track";
+	adjustSize(currentSize,currentType);
+});
+
+artistButton.addEventListener("click", () => {
+    artistButton.classList.add("active");
+    trackButton.classList.remove("active");
+	adjustSize(0,currentType);
+	currentType = "artist";
+	adjustSize(currentSize,currentType);
+});
+
+const button5 = document.getElementById("button5");
+const button10 = document.getElementById("button10");
+const button20 = document.getElementById("button20");
+
+button5.addEventListener("click", () => {
+	adjustSize(5, currentType);
+	currentSize = 5;
+    button5.classList.add("active");
+    button10.classList.remove("active");
+	button20.classList.remove("active");
+});
+
+button10.addEventListener("click", () => {
+	adjustSize(10, currentType);
+	currentSize = 10;
+    button5.classList.remove("active");
+    button10.classList.add("active");
+	button20.classList.remove("active");
+});
+
+button20.addEventListener("click", () => {
+	adjustSize(20, currentType);
+	currentSize = 20;
+    button5.classList.remove("active");
+    button10.classList.remove("active");
+	button20.classList.add("active");
+});
+
+trackButton.classList.add("active"); //by default, what is loaded in
+button5.classList.add("active");
+adjustSize(currentSize,currentType);
+
 const loop = () => {
 	// accounting for page resizing
-	width = window.innerWidth;
-	height = window.innerHeight;
+	height = document.getElementById('svg').clientHeight;
+	width = document.getElementById('svg').clientWidth;
+
 	setSvgSize(width, height);
+	for(let i =0; i < trackParticles.length; i++){
+		trackParticles[i].r = (width/10) / Math.sqrt(i+1);
+	}
+	for(let i =0; i < artistParticles.length; i++){
+		artistParticles[i].r = (width/10) / Math.sqrt(i+1);
+	}
 	// looping through particles checking for collisions and updating pos
-	for (let i = 0; i < particles.length; i++) {
-		for (let n = i + 1; n < particles.length; n++) {
-			particles[i].checkForIntercept(particles[n])
+	if(currentType === "track"){
+		for (let i = 0; i < trackParticles.length; i++) {
+			for (let n = i + 1; n < trackParticles.length; n++) {
+				trackParticles[i].checkForIntercept(trackParticles[n])
+			}
+			trackParticles[i].update();
 		}
-		particles[i].update();
+	}
+	else{
+		for (let i = 0; i < artistParticles.length; i++) {
+			for (let n = i + 1; n < artistParticles.length; n++) {
+				artistParticles[i].checkForIntercept(artistParticles[n])
+			}
+			artistParticles[i].update();
+		}
 	}
 	window.requestAnimationFrame(loop);
 }
 
 loop();
-
-
-
