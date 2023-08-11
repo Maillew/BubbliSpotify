@@ -4,7 +4,7 @@ var script = document.createElement('script');
 script.src = 'https://code.jquery.com/jquery-3.6.3.min.js';
 document.getElementsByTagName('head')[0].appendChild(script);
 
-const clientId = "b86a837e66bf413f9e5dfe56b233e1e3"; // Replace with your client id
+const clientId = "CLIENT ID"; // Replace with your client id
 
 // set up svg width
 let height = document.getElementById('svg').clientHeight, width = document.getElementById('svg').clientWidth;
