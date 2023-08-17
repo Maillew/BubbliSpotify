@@ -4,7 +4,7 @@ var script = document.createElement('script');
 script.src = 'https://code.jquery.com/jquery-3.6.3.min.js';
 document.getElementsByTagName('head')[0].appendChild(script);
 
-const clientId = "CLIENT ID"; // Replace with your client id
+const clientId = "CLIENT_ID"; // Replace with your client id
 
 // set up svg width
 let height = document.getElementById('svg').clientHeight, width = document.getElementById('svg').clientWidth;
@@ -122,6 +122,7 @@ function random(lb, ub){
   return Math.random()*(ub-lb)+lb;
 }
 let imageScale = 1.2;
+let dim = Math.min(width,height);
 class Particle {
 	constructor(radius, imageURL, text, type) {
 		this.isClicked = false;
@@ -468,8 +469,8 @@ function removeParticle(type){//removes num smallest particles
 	}
 }
 function addParticle(type){//adds next num largest particles
-	if(type ==="track") trackParticles.push(new Particle((width/10) / Math.sqrt(trackParticles.length + 1), trackImages[trackParticles.length].src, trackNames[trackParticles.length], "track"));
-	else artistParticles.push(new Particle((width/10) / Math.sqrt(artistParticles.length + 1), artistImages[artistParticles.length].src, artistNames[artistParticles.length], "artist"));
+	if(type ==="track") trackParticles.push(new Particle((dim/5) / Math.sqrt(trackParticles.length + 1), trackImages[trackParticles.length].src, trackNames[trackParticles.length], "track"));
+	else artistParticles.push(new Particle((dim/5) / Math.sqrt(artistParticles.length + 1), artistImages[artistParticles.length].src, artistNames[artistParticles.length], "artist"));
 }
 function adjustSize(sz, type){
 	if(type === "track"){
@@ -542,11 +543,12 @@ const loop = () => {
 	width = document.getElementById('svg').clientWidth;
 
 	setSvgSize(width, height);
+	dim = Math.min(width,height);
 	for(let i =0; i < trackParticles.length; i++){
-		trackParticles[i].r = (width/10) / Math.sqrt(i+1);
+		trackParticles[i].r = (dim/5) / Math.sqrt(i+1);
 	}
 	for(let i =0; i < artistParticles.length; i++){
-		artistParticles[i].r = (width/10) / Math.sqrt(i+1);
+		artistParticles[i].r = (dim/5) / Math.sqrt(i+1);
 	}
 	// looping through particles checking for collisions and updating pos
 	if(currentType === "track"){
