@@ -322,8 +322,13 @@ const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
 var trackImages = [];
 var trackNames = [];
+var trackArtistNames = [];
+var trackPopularity = [];
+
 var artistImages = [];
 var artistNames = [];
+var artistPopularity = [];
+var artistGenres = [];
 
 if (!code) {
     redirectToAuthCodeFlow(clientId);
@@ -413,8 +418,9 @@ function initTracks(profile) {
 
 function addTrack(profile){
 	var url = profile.items[trackImages.length].album.images[0].url;
-
 	var name = profile.items[trackImages.length].name;
+	var artistName = profile.items[trackImages.length].artists[0].name;
+	var popularity = profile.items[trackImages.length].popularity;
 	//trim the track name
 		//if it has brackets (with) or (feat.) we can trim
 	for(let i =1; i<name.length; i++){
@@ -427,6 +433,8 @@ function addTrack(profile){
 	img.src = url;
 	trackImages.push(img);
 	trackNames.push(name);
+	trackArtistNames.push(artistName);
+	trackPopularity.push(popularity);
 }
 
 function initArtists(profile) {
@@ -437,12 +445,16 @@ function initArtists(profile) {
 function addArtist(profile){
 	var url = profile.items[artistImages.length].images[0].url;
 	var name = profile.items[artistImages.length].name;
+	var popularity = profile.items[artistImages.length].popularity;
+	var followers = profile.items[artistImages.length].genres;
 	name = "#" + (artistImages.length+1) + " " + name;
 
 	var img = new Image();
 	img.src = url;
 	artistImages.push(img);
 	artistNames.push(name);
+	artistPopularity.push(popularity);
+	artistGenres.push(followers);
 }
 
 function removeNode(obj){
@@ -490,15 +502,19 @@ const artistButton = document.getElementById("artistButton");
 
 
 trackButton.addEventListener("click", () => {
-    trackButton.classList.add("active");
+    trackCarousel.classList.add("active");
+	trackButton.classList.add("active");
     artistButton.classList.remove("active");
+    artistCarousel.classList.remove("active");
 	adjustSize(0,currentType);
 	currentType = "track";
 	adjustSize(currentSize,currentType);
 });
 
 artistButton.addEventListener("click", () => {
-    artistButton.classList.add("active");
+	artistButton.classList.add("active");
+	artistCarousel.classList.add("active");
+	trackCarousel.classList.remove("active");
     trackButton.classList.remove("active");
 	adjustSize(0,currentType);
 	currentType = "artist";
@@ -571,3 +587,66 @@ const loop = () => {
 }
 
 loop();
+
+// Carousel
+
+function adjustCarousel(type){
+	for(let i = 1; i<=20; i++){
+		let name = "name" + i;
+		let d = "d" + i;
+		let img = "img" + i;
+		const htmlName = document.getElementById(name);
+		const htmlImg = document.getElementById(img);
+		const htmlD = document.getElementById(d);
+
+		if(type === "track"){
+			htmlName.textContent = trackNames[i-1];
+			htmlImg.src = trackImages[i-1].src;
+			var artistName = trackArtistNames[i-1];
+			var popularity = trackPopularity[i-1];
+			var desc = "By: " + artistName + '<br>' + "Popularity: " + popularity;
+			htmlD.innerHTML = desc;
+		}
+		else{
+			htmlName.textContent = artistNames[i-1];
+			htmlImg.src = artistImages[i-1].src;
+			var genres = artistGenres[i-1];
+			var popularity = artistPopularity[i-1];
+			var genreD = "Genre(s): ";
+			for(let j =0; j<Math.min(3,genres.length); j++){
+				if(j>0) genreD+=", ";
+				genreD += genres[j];
+			}
+			var desc = "";
+			if(genres.length!==0) desc+=genreD + '<br>';
+			desc+= "Popularity: " + popularity;
+			htmlD.innerHTML = desc;
+		}
+	}
+}
+adjustCarousel(currentType);
+
+const trackCarousel = document.getElementById("trackButtonCarousel");
+const artistCarousel = document.getElementById("artistButtonCarousel");
+
+trackCarousel.addEventListener("click", () => {
+    trackCarousel.classList.add("active");
+	trackButton.classList.add("active");
+    artistButton.classList.remove("active");
+    artistCarousel.classList.remove("active");
+	adjustSize(0,currentType);
+	currentType = "track";
+	adjustSize(currentSize,currentType);
+	adjustCarousel(currentType);
+});
+
+artistCarousel.addEventListener("click", () => {
+    artistButton.classList.add("active");
+	artistCarousel.classList.add("active");
+	trackCarousel.classList.remove("active");
+    trackButton.classList.remove("active");
+	adjustSize(0,currentType);
+	currentType = "artist";
+	adjustSize(currentSize,currentType);
+	adjustCarousel(currentType);
+});
