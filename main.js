@@ -316,338 +316,354 @@ class Particle {
 let trackParticles = [];
 let artistParticles = [];
 
+const apiURL = "http://localhost:8888";
 
-//// api shenanigans
-const params = new URLSearchParams(window.location.search);
-const code = params.get("code");
-var trackImages = [];
-var trackNames = [];
-var trackArtistNames = [];
-var trackPopularity = [];
-
-var artistImages = [];
-var artistNames = [];
-var artistPopularity = [];
-var artistGenres = [];
-
-if (!code) {
-    redirectToAuthCodeFlow(clientId);
-} else {
-    const accessToken = await getAccessToken(clientId, code);
-    const tracks = await fetchTracks(accessToken);
-    const artists = await fetchArtists(accessToken);
-	initTracks(tracks);
-	initArtists(artists);
+async function fetchData(accessToken) {
+  try {
+    const response = await fetch(apiURL + '/fetch-data?access_token=' + accessToken);
+    const data = await response.json();
+    console.log(data);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
 }
+//FINALLY. NOW WE SOMEHOW NEED TO GET THE ACCESS TOKEN EACH TIME LMFAO
 
-export async function redirectToAuthCodeFlow(clientId) {
-    const verifier = generateCodeVerifier(128);
-    const challenge = await generateCodeChallenge(verifier);
-
-    localStorage.setItem("verifier", verifier);
-
-    const params = new URLSearchParams();
-    params.append("client_id", clientId);
-    params.append("response_type", "code");
-    params.append("redirect_uri", "http://localhost:5173/user.html");
-    params.append("scope", "user-read-private user-read-email user-top-read");
-    params.append("code_challenge_method", "S256");
-    params.append("code_challenge", challenge);
-
-    document.location = `https://accounts.spotify.com/authorize?${params.toString()}`;
-}
-
-function generateCodeVerifier(length) {
-    let text = '';
-    let possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-    for (let i = 0; i < length; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
-}
-
-async function generateCodeChallenge(codeVerifier) {
-    const data = new TextEncoder().encode(codeVerifier);
-    const digest = await window.crypto.subtle.digest('SHA-256', data);
-    return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-}
-
-export async function getAccessToken(clientId, code) {
-    const verifier = localStorage.getItem("verifier");
-
-    const params = new URLSearchParams();
-    params.append("client_id", clientId);
-    params.append("grant_type", "authorization_code");
-    params.append("code", code);
-    params.append("redirect_uri", "http://localhost:5173/user.html");
-    params.append("code_verifier", verifier);
-
-    const result = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params
-    });
-
-    const { access_token } = await result.json();
-    return access_token;
-}
-
-async function fetchTracks(token) {
-    const result = await fetch("https://api.spotify.com/v1/me/top/tracks", {
-        method: "GET", headers: { Authorization: `Bearer ${token}` }
-    });
-
-    return await result.json();
-}
-async function fetchArtists(token) {
-    const result = await fetch("https://api.spotify.com/v1/me/top/artists", {
-        method: "GET", headers: { Authorization: `Bearer ${token}` }
-    });
-
-    return await result.json();
-}
-
-function initTracks(profile) {
-    console.log(profile);
-	for(let i =0; i<20; i++) addTrack(profile);
-}
-
-function addTrack(profile){
-	var url = profile.items[trackImages.length].album.images[0].url;
-	var name = profile.items[trackImages.length].name;
-	var artistName = profile.items[trackImages.length].artists[0].name;
-	var popularity = profile.items[trackImages.length].popularity;
-	//trim the track name
-		//if it has brackets (with) or (feat.) we can trim
-	for(let i =1; i<name.length; i++){
-		if(name[i] === '('){
-			name = name.substring(0,i-1);
-		}
-	}
-	name = "#" + (trackImages.length+1) + " " + name;
-	var img = new Image();
-	img.src = url;
-	trackImages.push(img);
-	trackNames.push(name);
-	trackArtistNames.push(artistName);
-	trackPopularity.push(popularity);
-}
-
-function initArtists(profile) {
-    console.log(profile);
-	for(let i =0; i<20; i++) addArtist(profile);
-}
-
-function addArtist(profile){
-	var url = profile.items[artistImages.length].images[0].url;
-	var name = profile.items[artistImages.length].name;
-	var popularity = profile.items[artistImages.length].popularity;
-	var followers = profile.items[artistImages.length].genres;
-	name = "#" + (artistImages.length+1) + " " + name;
-
-	var img = new Image();
-	img.src = url;
-	artistImages.push(img);
-	artistNames.push(name);
-	artistPopularity.push(popularity);
-	artistGenres.push(followers);
-}
-
-function removeNode(obj){
-	svg.removeChild(obj);
-}
-function removeParticle(type){//removes num smallest particles
-	if(type === "track"){
-		if(trackParticles.length ===0) return;
-		var obj = trackParticles.pop();
-		removeNode(obj.imageEl);
-		removeNode(obj.clipPathEl);
-		removeNode(obj.textEl);
-		removeNode(obj.overlayEl);
-		removeNode(obj.el);
-	}
-	else{
-		if(artistParticles.length ===0) return;
-		var obj = artistParticles.pop();
-		removeNode(obj.imageEl);
-		removeNode(obj.clipPathEl);
-		removeNode(obj.textEl);
-		removeNode(obj.overlayEl);
-		removeNode(obj.el);
-	}
-}
-function addParticle(type){//adds next num largest particles
-	if(type ==="track") trackParticles.push(new Particle((dim/4) / Math.sqrt(trackParticles.length + 1), trackImages[trackParticles.length].src, trackNames[trackParticles.length], "track"));
-	else artistParticles.push(new Particle((dim/4) / Math.sqrt(artistParticles.length + 1), artistImages[artistParticles.length].src, artistNames[artistParticles.length], "artist"));
-}
-function adjustSize(sz, type){
-	if(type === "track"){
-		while(trackParticles.length > sz) removeParticle(type);
-		while(trackParticles.length < sz) addParticle(type);
-	}
-	else{
-		while(artistParticles.length > sz) removeParticle(type);
-		while(artistParticles.length < sz) addParticle(type);
-	}
-}
-
-// animation loop
-
-const trackButton = document.getElementById("trackButton");
-const artistButton = document.getElementById("artistButton");
+let accessToken = "BQCPtROzyuPyZDj7vlFBewrV3K4iTHwRhLNmpSj2clZRHrsBz1t6o6efT7Y8gNb5b-tW8LvgPGBpeRkL19HNYmfU6oBpgaj4q9IbBAgUhMtUq3gAY5H_EKjFnrhX3lPgw88kKfrttQkhU7a8fuqp1IIqZtxUcWjgV3_327r8rgOrwrTDxUdySM9ZEVgL2fTSfgI";
+fetchData(accessToken);
 
 
-trackButton.addEventListener("click", () => {
-    trackCarousel.classList.add("active");
-	trackButton.classList.add("active");
-    artistButton.classList.remove("active");
-    artistCarousel.classList.remove("active");
-	adjustSize(0,currentType);
-	currentType = "track";
-	adjustSize(currentSize,currentType);
-});
+// //// api shenanigans
+// const params = new URLSearchParams(window.location.search);
+// const code = params.get("code");
+// var trackImages = [];
+// var trackNames = [];
+// var trackArtistNames = [];
+// var trackPopularity = [];
 
-artistButton.addEventListener("click", () => {
-	artistButton.classList.add("active");
-	artistCarousel.classList.add("active");
-	trackCarousel.classList.remove("active");
-    trackButton.classList.remove("active");
-	adjustSize(0,currentType);
-	currentType = "artist";
-	adjustSize(currentSize,currentType);
-});
+// var artistImages = [];
+// var artistNames = [];
+// var artistPopularity = [];
+// var artistGenres = [];
 
-const button5 = document.getElementById("button5");
-const button10 = document.getElementById("button10");
-const button20 = document.getElementById("button20");
+// if (!code) {
+//     redirectToAuthCodeFlow(clientId);
+// } else {
+//     const accessToken = await getAccessToken(clientId, code);
+//     const tracks = await fetchTracks(accessToken);
+//     const artists = await fetchArtists(accessToken);
+// 	initTracks(tracks);
+// 	initArtists(artists);
+// }
 
-button5.addEventListener("click", () => {
-	adjustSize(5, currentType);
-	currentSize = 5;
-    button5.classList.add("active");
-    button10.classList.remove("active");
-	button20.classList.remove("active");
-});
+// export async function redirectToAuthCodeFlow(clientId) {
+//     const verifier = generateCodeVerifier(128);
+//     const challenge = await generateCodeChallenge(verifier);
 
-button10.addEventListener("click", () => {
-	adjustSize(10, currentType);
-	currentSize = 10;
-    button5.classList.remove("active");
-    button10.classList.add("active");
-	button20.classList.remove("active");
-});
+//     localStorage.setItem("verifier", verifier);
 
-button20.addEventListener("click", () => {
-	adjustSize(20, currentType);
-	currentSize = 20;
-    button5.classList.remove("active");
-    button10.classList.remove("active");
-	button20.classList.add("active");
-});
+//     const params = new URLSearchParams();
+//     params.append("client_id", clientId);
+//     params.append("response_type", "code");
+//     params.append("redirect_uri", "http://localhost:8888/user.html");
+//     params.append("scope", "user-read-private user-read-email user-top-read");
+//     params.append("code_challenge_method", "S256");
+//     params.append("code_challenge", challenge);
 
-trackButton.classList.add("active"); //by default, what is loaded in
-button5.classList.add("active");
-adjustSize(currentSize,currentType);
+//     document.location = `https://accounts.spotify.com/authorize?${params.toString()}`;
+// }
 
-const loop = () => {
-	// accounting for page resizing
-	height = document.getElementById('svg').clientHeight;
-	width = document.getElementById('svg').clientWidth;
+// function generateCodeVerifier(length) {
+//     let text = '';
+//     let possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-	setSvgSize(width, height);
-	dim = Math.min(width,height);
-	for(let i =0; i < trackParticles.length; i++){
-		trackParticles[i].r = (dim/4) / Math.sqrt(i+1);
-	}
-	for(let i =0; i < artistParticles.length; i++){
-		artistParticles[i].r = (dim/4) / Math.sqrt(i+1);
-	}
-	// looping through particles checking for collisions and updating pos
-	if(currentType === "track"){
-		for (let i = 0; i < trackParticles.length; i++) {
-			for (let n = i + 1; n < trackParticles.length; n++) {
-				trackParticles[i].checkForIntercept(trackParticles[n])
-			}
-			trackParticles[i].update();
-		}
-	}
-	else{
-		for (let i = 0; i < artistParticles.length; i++) {
-			for (let n = i + 1; n < artistParticles.length; n++) {
-				artistParticles[i].checkForIntercept(artistParticles[n])
-			}
-			artistParticles[i].update();
-		}
-	}
-	window.requestAnimationFrame(loop);
-}
+//     for (let i = 0; i < length; i++) {
+//         text += possible.charAt(Math.floor(Math.random() * possible.length));
+//     }
+//     return text;
+// }
 
-loop();
+// async function generateCodeChallenge(codeVerifier) {
+//     const data = new TextEncoder().encode(codeVerifier);
+//     const digest = await window.crypto.subtle.digest('SHA-256', data);
+//     return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
+//         .replace(/\+/g, '-')
+//         .replace(/\//g, '_')
+//         .replace(/=+$/, '');
+// }
 
-// Carousel
+// export async function getAccessToken(clientId, code) {
+//     const verifier = localStorage.getItem("verifier");
 
-function adjustCarousel(type){
-	for(let i = 1; i<=20; i++){
-		let name = "name" + i;
-		let d = "d" + i;
-		let img = "img" + i;
-		const htmlName = document.getElementById(name);
-		const htmlImg = document.getElementById(img);
-		const htmlD = document.getElementById(d);
+//     const params = new URLSearchParams();
+//     params.append("client_id", clientId);
+//     params.append("grant_type", "authorization_code");
+//     params.append("code", code);
+//     params.append("redirect_uri", "http://localhost:8888/user.html");
+//     params.append("code_verifier", verifier);
 
-		if(type === "track"){
-			htmlName.textContent = trackNames[i-1];
-			htmlImg.src = trackImages[i-1].src;
-			var artistName = trackArtistNames[i-1];
-			var popularity = trackPopularity[i-1];
-			var desc = "By: " + artistName + '<br>' + "Popularity: " + popularity;
-			htmlD.innerHTML = desc;
-		}
-		else{
-			htmlName.textContent = artistNames[i-1];
-			htmlImg.src = artistImages[i-1].src;
-			var genres = artistGenres[i-1];
-			var popularity = artistPopularity[i-1];
-			var genreD = "Genre(s): ";
-			for(let j =0; j<Math.min(2,genres.length); j++){
-				if(j>0) genreD+=", ";
-				genreD += genres[j];
-			}
-			var desc = "";
-			if(genres.length!==0) desc+=genreD + '<br>';
-			desc+= "Popularity: " + popularity;
-			htmlD.innerHTML = desc;
-		}
-	}
-}
-adjustCarousel(currentType);
+//     const result = await fetch("https://accounts.spotify.com/api/token", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+//         body: params
+//     });
 
-const trackCarousel = document.getElementById("trackButtonCarousel");
-const artistCarousel = document.getElementById("artistButtonCarousel");
-trackCarousel.classList.add("active"); //by default, what is loaded in
+//     const { access_token } = await result.json();
+//     return access_token;
+// }
 
-trackCarousel.addEventListener("click", () => {
-    trackCarousel.classList.add("active");
-	trackButton.classList.add("active");
-    artistButton.classList.remove("active");
-    artistCarousel.classList.remove("active");
-	adjustSize(0,currentType);
-	currentType = "track";
-	adjustSize(currentSize,currentType);
-	adjustCarousel(currentType);
-});
+// async function fetchTracks(token) {
+//     const result = await fetch("https://api.spotify.com/v1/me/top/tracks", {
+//         method: "GET", headers: { Authorization: `Bearer ${token}` }
+//     });
 
-artistCarousel.addEventListener("click", () => {
-    artistButton.classList.add("active");
-	artistCarousel.classList.add("active");
-	trackCarousel.classList.remove("active");
-    trackButton.classList.remove("active");
-	adjustSize(0,currentType);
-	currentType = "artist";
-	adjustSize(currentSize,currentType);
-	adjustCarousel(currentType);
-});
+//     return await result.json();
+// }
+// async function fetchArtists(token) {
+//     const result = await fetch("https://api.spotify.com/v1/me/top/artists", {
+//         method: "GET", headers: { Authorization: `Bearer ${token}` }
+//     });
+
+//     return await result.json();
+// }
+
+// function initTracks(profile) {
+//     console.log(profile);
+// 	for(let i =0; i<20; i++) addTrack(profile);
+// }
+
+// function addTrack(profile){
+// 	var url = profile.items[trackImages.length].album.images[0].url;
+// 	var name = profile.items[trackImages.length].name;
+// 	var artistName = profile.items[trackImages.length].artists[0].name;
+// 	var popularity = profile.items[trackImages.length].popularity;
+// 	//trim the track name
+// 		//if it has brackets (with) or (feat.) we can trim
+// 	for(let i =1; i<name.length; i++){
+// 		if(name[i] === '('){
+// 			name = name.substring(0,i-1);
+// 		}
+// 	}
+// 	name = "#" + (trackImages.length+1) + " " + name;
+// 	var img = new Image();
+// 	img.src = url;
+// 	trackImages.push(img);
+// 	trackNames.push(name);
+// 	trackArtistNames.push(artistName);
+// 	trackPopularity.push(popularity);
+// }
+
+// function initArtists(profile) {
+//     console.log(profile);
+// 	for(let i =0; i<20; i++) addArtist(profile);
+// }
+
+// function addArtist(profile){
+// 	var url = profile.items[artistImages.length].images[0].url;
+// 	var name = profile.items[artistImages.length].name;
+// 	var popularity = profile.items[artistImages.length].popularity;
+// 	var followers = profile.items[artistImages.length].genres;
+// 	name = "#" + (artistImages.length+1) + " " + name;
+
+// 	var img = new Image();
+// 	img.src = url;
+// 	artistImages.push(img);
+// 	artistNames.push(name);
+// 	artistPopularity.push(popularity);
+// 	artistGenres.push(followers);
+// }
+
+// function removeNode(obj){
+// 	svg.removeChild(obj);
+// }
+// function removeParticle(type){//removes num smallest particles
+// 	if(type === "track"){
+// 		if(trackParticles.length ===0) return;
+// 		var obj = trackParticles.pop();
+// 		removeNode(obj.imageEl);
+// 		removeNode(obj.clipPathEl);
+// 		removeNode(obj.textEl);
+// 		removeNode(obj.overlayEl);
+// 		removeNode(obj.el);
+// 	}
+// 	else{
+// 		if(artistParticles.length ===0) return;
+// 		var obj = artistParticles.pop();
+// 		removeNode(obj.imageEl);
+// 		removeNode(obj.clipPathEl);
+// 		removeNode(obj.textEl);
+// 		removeNode(obj.overlayEl);
+// 		removeNode(obj.el);
+// 	}
+// }
+// function addParticle(type){//adds next num largest particles
+// 	if(type ==="track") trackParticles.push(new Particle((dim/4) / Math.sqrt(trackParticles.length + 1), trackImages[trackParticles.length].src, trackNames[trackParticles.length], "track"));
+// 	else artistParticles.push(new Particle((dim/4) / Math.sqrt(artistParticles.length + 1), artistImages[artistParticles.length].src, artistNames[artistParticles.length], "artist"));
+// }
+// function adjustSize(sz, type){
+// 	if(type === "track"){
+// 		while(trackParticles.length > sz) removeParticle(type);
+// 		while(trackParticles.length < sz) addParticle(type);
+// 	}
+// 	else{
+// 		while(artistParticles.length > sz) removeParticle(type);
+// 		while(artistParticles.length < sz) addParticle(type);
+// 	}
+// }
+
+// // animation loop
+
+// const trackButton = document.getElementById("trackButton");
+// const artistButton = document.getElementById("artistButton");
+
+
+// trackButton.addEventListener("click", () => {
+//     trackCarousel.classList.add("active");
+// 	trackButton.classList.add("active");
+//     artistButton.classList.remove("active");
+//     artistCarousel.classList.remove("active");
+// 	adjustSize(0,currentType);
+// 	currentType = "track";
+// 	adjustSize(currentSize,currentType);
+// });
+
+// artistButton.addEventListener("click", () => {
+// 	artistButton.classList.add("active");
+// 	artistCarousel.classList.add("active");
+// 	trackCarousel.classList.remove("active");
+//     trackButton.classList.remove("active");
+// 	adjustSize(0,currentType);
+// 	currentType = "artist";
+// 	adjustSize(currentSize,currentType);
+// });
+
+// const button5 = document.getElementById("button5");
+// const button10 = document.getElementById("button10");
+// const button20 = document.getElementById("button20");
+
+// button5.addEventListener("click", () => {
+// 	adjustSize(5, currentType);
+// 	currentSize = 5;
+//     button5.classList.add("active");
+//     button10.classList.remove("active");
+// 	button20.classList.remove("active");
+// });
+
+// button10.addEventListener("click", () => {
+// 	adjustSize(10, currentType);
+// 	currentSize = 10;
+//     button5.classList.remove("active");
+//     button10.classList.add("active");
+// 	button20.classList.remove("active");
+// });
+
+// button20.addEventListener("click", () => {
+// 	adjustSize(20, currentType);
+// 	currentSize = 20;
+//     button5.classList.remove("active");
+//     button10.classList.remove("active");
+// 	button20.classList.add("active");
+// });
+
+// trackButton.classList.add("active"); //by default, what is loaded in
+// button5.classList.add("active");
+// adjustSize(currentSize,currentType);
+
+// const loop = () => {
+// 	// accounting for page resizing
+// 	height = document.getElementById('svg').clientHeight;
+// 	width = document.getElementById('svg').clientWidth;
+
+// 	setSvgSize(width, height);
+// 	dim = Math.min(width,height);
+// 	for(let i =0; i < trackParticles.length; i++){
+// 		trackParticles[i].r = (dim/4) / Math.sqrt(i+1);
+// 	}
+// 	for(let i =0; i < artistParticles.length; i++){
+// 		artistParticles[i].r = (dim/4) / Math.sqrt(i+1);
+// 	}
+// 	// looping through particles checking for collisions and updating pos
+// 	if(currentType === "track"){
+// 		for (let i = 0; i < trackParticles.length; i++) {
+// 			for (let n = i + 1; n < trackParticles.length; n++) {
+// 				trackParticles[i].checkForIntercept(trackParticles[n])
+// 			}
+// 			trackParticles[i].update();
+// 		}
+// 	}
+// 	else{
+// 		for (let i = 0; i < artistParticles.length; i++) {
+// 			for (let n = i + 1; n < artistParticles.length; n++) {
+// 				artistParticles[i].checkForIntercept(artistParticles[n])
+// 			}
+// 			artistParticles[i].update();
+// 		}
+// 	}
+// 	window.requestAnimationFrame(loop);
+// }
+
+// loop();
+
+// // Carousel
+
+// function adjustCarousel(type){
+// 	for(let i = 1; i<=20; i++){
+// 		let name = "name" + i;
+// 		let d = "d" + i;
+// 		let img = "img" + i;
+// 		const htmlName = document.getElementById(name);
+// 		const htmlImg = document.getElementById(img);
+// 		const htmlD = document.getElementById(d);
+
+// 		if(type === "track"){
+// 			htmlName.textContent = trackNames[i-1];
+// 			htmlImg.src = trackImages[i-1].src;
+// 			var artistName = trackArtistNames[i-1];
+// 			var popularity = trackPopularity[i-1];
+// 			var desc = "By: " + artistName + '<br>' + "Popularity: " + popularity;
+// 			htmlD.innerHTML = desc;
+// 		}
+// 		else{
+// 			htmlName.textContent = artistNames[i-1];
+// 			htmlImg.src = artistImages[i-1].src;
+// 			var genres = artistGenres[i-1];
+// 			var popularity = artistPopularity[i-1];
+// 			var genreD = "Genre(s): ";
+// 			for(let j =0; j<Math.min(2,genres.length); j++){
+// 				if(j>0) genreD+=", ";
+// 				genreD += genres[j];
+// 			}
+// 			var desc = "";
+// 			if(genres.length!==0) desc+=genreD + '<br>';
+// 			desc+= "Popularity: " + popularity;
+// 			htmlD.innerHTML = desc;
+// 		}
+// 	}
+// }
+// adjustCarousel(currentType);
+
+// const trackCarousel = document.getElementById("trackButtonCarousel");
+// const artistCarousel = document.getElementById("artistButtonCarousel");
+// trackCarousel.classList.add("active"); //by default, what is loaded in
+
+// trackCarousel.addEventListener("click", () => {
+//     trackCarousel.classList.add("active");
+// 	trackButton.classList.add("active");
+//     artistButton.classList.remove("active");
+//     artistCarousel.classList.remove("active");
+// 	adjustSize(0,currentType);
+// 	currentType = "track";
+// 	adjustSize(currentSize,currentType);
+// 	adjustCarousel(currentType);
+// });
+
+// artistCarousel.addEventListener("click", () => {
+//     artistButton.classList.add("active");
+// 	artistCarousel.classList.add("active");
+// 	trackCarousel.classList.remove("active");
+//     trackButton.classList.remove("active");
+// 	adjustSize(0,currentType);
+// 	currentType = "artist";
+// 	adjustSize(currentSize,currentType);
+// 	adjustCarousel(currentType);
+// });
