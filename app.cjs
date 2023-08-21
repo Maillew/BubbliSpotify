@@ -13,8 +13,6 @@ const querystring = require ('querystring');
 const cookieParser = require ('cookie-parser');
 
 
-
-
 /**
  * Generates a random string containing numbers and letters
  * @param  {number} length The length of the string
@@ -62,8 +60,11 @@ app.get('/login', function(req, res) {
       state: state
     }));
 });
-
-app.get('/callback', function(req, res) {
+var access_token = "", refresh_token = "";
+app.get('/token', function (req, res){
+  res.send(access_token);
+})
+app.get('/callback', function(req, res) {//after we are authorized, we are redirected to redirectURI, currently callback
 
   // your application requests refresh and access tokens
   // after checking the state parameter
@@ -99,21 +100,11 @@ app.get('/callback', function(req, res) {
     };
 
     request.post(authOptions, async function(error, response, body) {
-      if (!error && response.statusCode === 200) { //from my understanding, we get this access token, and the url changes
-        var access_token = body.access_token,
+      if (!error && response.statusCode === 200) { 
+        access_token = body.access_token,
             refresh_token = body.refresh_token;
-        console.log(access_token); //debug
-
-        var options = {
-          url: 'https://api.spotify.com/v1/me/top/tracks',
-          headers: { 'Authorization': 'Bearer ' + access_token },
-          json: true
-        };
-
-        // use the access token to access the Spotify Web API
-        request.get(options, async function(error, response, body) {//track data
-          res.json(body);
-        });
+        console.log(access_token);
+        res.redirect("http://localhost:5173/user.html");
       } 
       else {
         res.json({error: 'invalid-token'});
@@ -125,7 +116,6 @@ app.get('/callback', function(req, res) {
 app.get('/fetch-data', async function(req, res) {
   try {
     const access_token = req.query.access_token; // Get access token from query parameter
-    console.log("yey " +access_token);
     if (!access_token) {
       res.status(400).json({ error: 'Missing access_token' });
       return;
@@ -136,14 +126,23 @@ app.get('/fetch-data', async function(req, res) {
       headers: { 'Authorization': 'Bearer ' + access_token },
       json: true
     };
-
-    request.get(options, async function(error, response, body) {
-      if (!error && response.statusCode === 200) {
-        console.log("yey");
-        res.json(body);
-      } else {
+    var options2 = {
+      url: 'https://api.spotify.com/v1/me/top/artists',
+      headers: { 'Authorization': 'Bearer ' + access_token },
+      json: true
+    };
+    request.get(options, async function(error, response, trackData) {
+      if (error && response.statusCode !== 200) {
         res.status(response.statusCode).json({ error: 'invalid-token' });
+        return;
       }
+      request.get(options2, async function(error, response, artistData) {
+        if(error && response.statusCode !== 200) {
+          res.status(response.statusCode).json({ error: 'invalid-token' });
+        }
+        const combinedData = {tracks: trackData, artists: artistData};
+        res.json(combinedData);
+      });
     });
   } catch (error) {
     res.status(500).json({ error: 'server-error' });
