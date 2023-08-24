@@ -20,16 +20,33 @@
         <%- include("nav.ejs") %>
         <!-- flex box going down, and then the svg stuff to the right -->
         <!-- for html, we can just save n refresh -->
-        <div class = "container share">
-            <div class = "buttonTypeContainer">
-                <button type = "button" class = "btn btn-primary shadow-none buttonType" id = "trackButton"> Top Tracks </button>
-                <button type = "button" class = "btn btn-primary shadow-none buttonType" id = "artistButton"> Top Artists</button>
+        <div class = "shareContainer">
+            <div class = "legend">
+                <button type = "button" class = "btn btn-primary shadow-none buttonShare" id = "trackShareButton"> Top Tracks </button>
+                <button type = "button" class = "btn btn-primary shadow-none buttonShare" id = "artistShareButton"> Top Artists</button>
+                <!-- display current users (up to 5) -->
+                <% for (let i=0; i<emails.length; i++) { %>
+                    <% console.log(emails[i]) %>
+                    <form action="/deleteUser" method="post">
+                        <div class="item">
+                            <input type="checkbox" name="email" value="<%=emails[i]%>" onChange="this.form.submit()">
+                            <p><%=emails[i]%></p>
+                        </div>
+                    </form>
+                <% } %>
+                <!-- add new user button -->
+                <% if (emails.length < 5) { %>
+                    <form class="item" id = "addUserForm">
+                        <input type="text" name="newUserEmail" placeholder="Enter User's Email" autocomplete="off">
+                        <button type="submit">+</button>
+                    </form>
+                <% }%>
             </div>
-        </div>
-        <div class = "ballsContainer">
-            <div id="app"></div>
-            <svg id="svg" width = "100%" height = "100%" xmlns="http://www.w3.org/2000/svg">
-            </svg>
+            <div class = "shareBallsContainer">
+                <div id="app"></div>
+                <svg id="svg" width = "100%" height = "100%" xmlns="http://www.w3.org/2000/svg">
+                </svg>
+            </div>
         </div>
     </body>
 
