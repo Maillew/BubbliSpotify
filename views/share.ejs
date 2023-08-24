@@ -18,6 +18,19 @@
     </head>
     <body>
         <%- include("nav.ejs") %>
+        <!-- flex box going down, and then the svg stuff to the right -->
+        <!-- for html, we can just save n refresh -->
+        <div class = "container share">
+            <div class = "buttonTypeContainer">
+                <button type = "button" class = "btn btn-primary shadow-none buttonType" id = "trackButton"> Top Tracks </button>
+                <button type = "button" class = "btn btn-primary shadow-none buttonType" id = "artistButton"> Top Artists</button>
+            </div>
+        </div>
+        <div class = "ballsContainer">
+            <div id="app"></div>
+            <svg id="svg" width = "100%" height = "100%" xmlns="http://www.w3.org/2000/svg">
+            </svg>
+        </div>
     </body>
 
 </html>
