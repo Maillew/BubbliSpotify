@@ -32,13 +32,11 @@ body{
   display:flex;
   flex-direction: column;
   position:relative;
-  left: 5%;
   width: 60%;
-  background-color: red;
   padding: 10px;
 }
-.abtContainer .btn{
-  background-color: #6ddfd9;
+.abtBtn{
+  background-color: #4070F4;
   border: none;
   text-align: center;
   text-decoration: none;
@@ -47,6 +45,10 @@ body{
   border-radius: 2rem;
   width: min(100%,150px);
   height: 3rem;
+}
+.abtBtn{
+  color: #f2fbfa;
+  font-weight: normal;
 }
 .abtContainer h1{
   font-size: 2rem;
@@ -139,7 +141,7 @@ body{
   border-radius: 20px;
   position: relative;
   left: 3vh;
-  width: calc(100vw - 6vh);
+  width: calc(100vw - 6vh - 20px);
 
   height: calc(97vh - 193px); /* Adjust the height based on your layout */
   overflow: hidden; /* Hide overflow if necessary */
@@ -294,4 +296,72 @@ body{
 }
 .card-content{
   height: 100px;
+}
+
+
+/* sharing da balls */
+.shareContainer{
+  display: inline-flex;
+  width: 100%;
+}
+.legend{
+  display: inline-flex;
+  flex-direction: column; /* Items will be stacked vertically */
+  width: 20%;
+  align-items: center;
+  gap: 10px;
+  background-color: lightgray;
+
+}
+.buttonShare{
+  font-size: calc(0.5rem + 0.5vw); /* Adjust the base font size and multiplier as needed */
+  border-radius: 4rem;
+  background-color: #f2fbfa;
+  color: #2a2a2a;
+  outline: none;
+  box-shadow: none;
+  width: 80%;
+}
+
+.shareBallsContainer{
+  border-style: inset;
+  border-color: white;
+  border-radius: 20px;
+  position: relative;
+  margin-right: 20px;
+  flex:1;
+
+  height: calc(97vh - 100px); /* Adjust the height based on your layout */
+  overflow: hidden; /* Hide overflow if necessary */
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 767px) {
+  .shareContainer {
+    flex-direction: column; /* Stacked layout */
+    height: calc(100vh - 120px);
+  }
+  
+  .legend {
+    width: 100%;
+    padding: 10px;
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    background-color: lightgray;
+  }
+  
+  .shareBallsContainer {
+    margin-top: 10px;
+    border-style: inset;
+    border-color: white;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+
+    margin-right: 20px;
+    margin-left: 20px;
+    flex: 1;
+    padding: 20px;
+  }
 }
