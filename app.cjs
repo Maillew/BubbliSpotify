@@ -1,4 +1,4 @@
-var client_id = 'CLIENT ID'; // Your client id
+var client_id = 'CLIEINT ID'; // Your client id
 var client_secret = 'SECRET'; // Your secret
 var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
 
@@ -44,7 +44,10 @@ app.use(cors({
       origin: 'http://localhost:5173',
     }))
    .use(express.static(__dirname))
-   .use(cookieParser());
+   .use(cookieParser())
+   .use(bodyParser.urlencoded({extended: true}))
+   .use(bodyParser.json());
+
 
 app.get('/', (req, res) =>{
   res.render("index.ejs");
@@ -57,6 +60,8 @@ app.get('/user', (req, res) =>{
 });
 var access_token = "";
 var loggedIn = false;
+var userEmail = "";
+var shareUsers= [];
 app.get('/login', function(req, res) {
   console.log("pressed");
   var state = generateRandomString(16);
@@ -114,6 +119,20 @@ app.get('/callback', function(req, res) {//after we are authorized, we are redir
         loggedIn = true;
         console.log(access_token);
         res.redirect("/user");
+        var options3 = {
+          url: 'https://api.spotify.com/v1/me',
+          headers: { 'Authorization': 'Bearer ' + access_token },
+          json: true
+        }
+        request.get(options3, async function(error, response, body) {
+          if(error && response.statusCode !== 200) {
+            res.status(response.statusCode).json({ error: 'invalid-token' });
+            return;
+          }
+          userEmail = body.email;
+          shareUsers.push(userEmail);
+          console.log(userEmail);
+        });
       } 
       else {
         res.json({error: 'invalid-token'});
@@ -235,12 +254,14 @@ app.get('/refresh_token', function(req, res) {
   });
 });
 
-
 app.get('/share', function(req,res){//need to check if we are logged in
   if(!loggedIn){
     res.redirect("/login");
   }
-  else res.render("share.ejs");// , {name: {stuff ur sending over}}
+  else {
+    console.log(shareUsers);
+    res.render("share.ejs", {emails: shareUsers});// , {name: {stuff ur sending over}}
+  }
 });
 
 app.post('/fetch-user', function(req,res){
@@ -258,5 +279,34 @@ app.post('/fetch-user', function(req,res){
     });
 })
 
+app.post("/addUser", function(req,res){
+  console.log(req.body);
+  const email = req.body.newUserEmail;
+  
+  if (shareUsers.includes(email)) {
+    return res.status(200).json({ message: "User already exists" });
+  }
+  //need to check if user exists or not before pushing
+  //if they dont exist, make a pop up?
+  //if dont exist
+
+  shareUsers.push(email);
+  console.log("redirecting");
+  res.status(200).json({ message: "User added successfully" });
+})
+
+app.post("/deleteUser", function(req,res){
+  console.log(req.body);
+  const email = req.body.email;
+  
+  for(let i =0; i<shareUsers.length; i++){
+    if(shareUsers[i] === email){
+      shareUsers.splice(i,1);
+    }
+  }
+  res.redirect("/share");
+  //now need to add the balls to the screen
+  //maybe what we can do, is sync up the button, to call here, and the share.js file?
+})
 console.log('Listening on 8888');
 app.listen(8888);
