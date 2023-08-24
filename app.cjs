@@ -163,7 +163,7 @@ app.get('/fetch-data', async function(req, res) {
           }
           const combinedData = {
             email: body.email, 
-            pfp: body.images.url, 
+            pfp: body.images[0].url, 
             userName: body.display_name, 
             tracks: trackData, 
             artists: artistData
@@ -250,7 +250,7 @@ app.post('/fetch-user', function(req,res){
       if (user) {
         res.json(user.spotifyData); // Return user's Spotify data
       } else {
-        res.status(404).json({ message: 'User does not exist.' });
+        res.json({ message: 'User currently does not exist.' });
       }
     })
     .catch(error => {
