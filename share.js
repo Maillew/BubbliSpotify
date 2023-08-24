@@ -409,8 +409,8 @@ function removeUser(email){
 
 // animation loop
 
-const trackButton = document.getElementById("trackButton");
-const artistButton = document.getElementById("artistButton");
+const trackButton = document.getElementById("trackShareButton");
+const artistButton = document.getElementById("artistShareButton");
 
 trackButton.addEventListener("click", () => {
 	trackButton.classList.add("active");
@@ -476,3 +476,45 @@ const loop = () => {
 
 loop();
 
+
+// share.js
+
+
+// share.js
+const addUserForm = document.getElementById('addUserForm');
+addUserForm.addEventListener('submit', function(event) {
+	event.preventDefault();
+	
+	const newUserEmail = event.target.newUserEmail.value;
+	console.log(`Add button clicked for new user email: ${newUserEmail}`);
+	fetch('/addUser', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ newUserEmail: newUserEmail })
+	})
+	.then(response => response.json())
+	.then(data => {
+		if (data.message === "User already exists") {
+			alert("User already added");
+		} else if (data.message === "User added successfully") {
+			window.location.href = "/share";
+		}
+		else{
+			alert("User doesn't currently exist");
+		}
+	})
+	.catch(error => {
+		console.error('Error:', error);
+	});
+});
+
+const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+checkboxes.forEach(checkbox => {
+	checkbox.addEventListener('change', function() {
+		const email = this.value;
+		console.log(`Delete button clicked for email: ${email}`);
+		
+	});
+});
