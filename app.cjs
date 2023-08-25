@@ -1,5 +1,5 @@
-var client_id = 'ID'; // Your client id
-var client_secret = 'SECRET'; // Your secret
+var client_id = 'b86a837e66bf413f9e5dfe56b233e1e3'; // Your client id
+var client_secret = 'fe4bf2f3d33645df98ac52801f029dca'; // Your secret
 var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
 
 
@@ -151,12 +151,14 @@ app.get('/callback', function(req, res) {//after we are authorized, we are redir
             return;
           }
           userEmail = body.email;
-          var pfpLink = body.images[0].url;
+          console.log(body);
+          var pfpLink = "/views/defaultpfp.jpg";
+          if(body.images.length) pfpLink = body.images[0].url;
           const userObject = {
             email: userEmail,
             pfp: pfpLink,
             color: getColor(),
-            name: body.display_name
+            name: body.display_name.split(" ")[0]
           }
           shareUsers.push(userObject);
         });
@@ -207,10 +209,12 @@ app.get('/fetch-data', async function(req, res) {
             res.status(response.statusCode).json({ error: 'invalid-token' });
             return;
           }
+          var pfpLink = "/views/defaultpfp.jpg";
+          if(body.images.length) pfpLink = body.images[0].url;
           const combinedData = {
             email: body.email, 
-            pfp: body.images[0].url, 
-            userName: body.display_name, 
+            pfp: pfpLink, 
+            userName: body.display_name.split(" ")[0], 
             tracks: trackData, 
             artists: artistData
           };
@@ -292,8 +296,8 @@ app.get('/share', function(req,res){//need to check if we are logged in
 });
 
 app.post('/fetch-user', function(req,res){
-  const email = req.body.email;
-  User.findOne({ email: userEmail })
+  const newEmail = req.body.email;
+  User.findOne({ email: newEmail })
     .then(user => {
       if (user) {
         res.json(user.spotifyData); // Return user's Spotify data
