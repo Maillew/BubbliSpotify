@@ -21,41 +21,47 @@
         <!-- flex box going down, and then the svg stuff to the right -->
         <!-- for html, we can just save n refresh -->
         <div class = "shareContainer">
-            <div class = "legend">
-                <button type = "button" class = "btn btn-primary shadow-none buttonShare" id = "trackShareButton"> Top Tracks </button>
-                <button type = "button" class = "btn btn-primary shadow-none buttonShare" id = "artistShareButton"> Top Artists</button>
-                <!-- display current users (up to 5) -->
-                <% for (let i=0; i<user.length; i++) { %>
-                    <% console.log(user[i]) %>
-                    <div class="item">
-                        <form action="/deleteUser" method="post">
-                            <!-- also include the circle with pfp to the left of name -->
-                            <div class="profile-picture"
-                                style="
-                                    background-image: url('<%= user[i].pfp %>');
-                                    border-color: <%= user[i].color %>;
-                                "
-                                data-color="<%= user[i].color %>"
-                                data-email="<%= user[i].email %>"
-                                >
-                            </div>
-                            <p><%=user[i].name%></p>
-                            <button type = "submit" class = "svg-button">
-                                <img src="/views/delete.png" alt="Delete" id = "deleteImg" width = "30px" height = "30px">
-                                <input type="hidden" name="email" value="<%=user[i].email%>">
-                            </button>
-                            <!-- make delete button same line as name -->
-                            <!-- probably some flexbox shitt -->
+            <div class="legend-container">
+                <div class = "legend-buttons">
+                    <button type = "button" class = "btn btn-primary shadow-none buttonShare" id = "trackShareButton"> Top Tracks </button>
+                    <button type = "button" class = "btn btn-primary shadow-none buttonShare" id = "artistShareButton"> Top Artists</button>
+                </div>
+                <div class = "legend">
+                    <!-- display current users (up to 5) -->
+                    <% for (let i=0; i<user.length; i++) { %>
+                        <% console.log(user[i]) %>
+                        <div class="item">
+                            <form action="/deleteUser" method="post">
+                                <!-- also include the circle with pfp to the left of name -->
+                                <div class="profile-picture"
+                                    style="
+                                        background-image: url('<%= user[i].pfp %>');
+                                        border-color: <%= user[i].color %>;
+                                    "
+                                    data-color="<%= user[i].color %>"
+                                    data-email="<%= user[i].email %>"
+                                    >
+                                </div>
+                                <div class="profile-details">
+                                    <p><%= user[i].name %></p>
+                                </div>
+                                <button type="submit" class="svg-button" id = "deleteButton">
+                                    <img src="/views/delete.png" alt="Delete" id="deleteImg" width="30px" height="30px">
+                                    <input type="hidden" name="email" value="<%= user[i].email %>">
+                                </button>
+                                <!-- make delete button same line as name -->
+                                <!-- probably some flexbox shitt -->
+                            </form>
+                        </div>
+                    <% } %>
+                    <!-- add new user button -->
+                    <% if (user.length < 5) { %>
+                        <form class="item" id = "addUserForm">
+                            <input type="text" name="newUserEmail" placeholder="Enter User's Email" autocomplete="off">
+                            <button type="submit" id = "addButton">+</button>
                         </form>
-                    </div>
-                <% } %>
-                <!-- add new user button -->
-                <% if (user.length < 5) { %>
-                    <form class="item" id = "addUserForm">
-                        <input type="text" name="newUserEmail" placeholder="Enter User's Email" autocomplete="off">
-                        <button type="submit">+</button>
-                    </form>
-                <% }%>
+                    <% }%>
+                </div>
             </div>
             <div class = "shareBallsContainer">
                 <svg id="svg" width = "100%" height = "100%" xmlns="http://www.w3.org/2000/svg">
