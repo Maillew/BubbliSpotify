@@ -28,13 +28,6 @@ let mouseX = 0;
 let mouseY = 0;
 const dragVelocityFactor = 0.005;
 
-/*
-	ok i think i know the issue:
-		the mouse click is with respect to the whole page
-		but the coordinate of the particles is with respect to the svg
-
-	i think what we do is get the coord of the top left corner of the container?
-*/
 
 svg.addEventListener('mousedown', (e) => {
 	mouseDown = true;
@@ -42,71 +35,37 @@ svg.addEventListener('mousedown', (e) => {
 	mouseX = e.clientX; 
 	mouseY = e.clientY;
 	// Check if any particle is clicked and set its 'isClicked' flag.
-	console.log(mouseX,mouseY);
-	if(currentType ==="track"){
-		trackParticles.forEach((particle) => {
-			const dx = particle.x - mouseX + offset.left;
-			const dy = particle.y - mouseY + offset.top;
-			if (Math.sqrt(dx * dx + dy * dy) <= particle.r) {
-				particle.isClicked = true;
-			}
-			else {
-				particle.isClicked = false;
-			}
-		});
-	}
-	else{
-		artistParticles.forEach((particle) => {
-			const dx = particle.x - mouseX + offset.left;
-			const dy = particle.y - mouseY + offset.top;
-			if (Math.sqrt(dx * dx + dy * dy) <= particle.r) {
-				particle.isClicked = true;
-			}
-			else {
-				particle.isClicked = false;
-			}
-		});
-	}
-	
+	renderParticles.forEach((particle) => {	
+		const dx = particle.x - mouseX + offset.left;	
+		const dy = particle.y - mouseY + offset.top;	
+		if (Math.sqrt(dx * dx + dy * dy) <= particle.r) {	
+			particle.isClicked = true;	
+		}	
+		else {	
+			particle.isClicked = false;	
+		}	
+	});	
 });
   
 svg.addEventListener('mouseup', () => {
 	mouseDown = false;
 
 	// Reset 'isClicked' flag for all particles when the mouse is released.
-	if(currentType === "track"){
-		trackParticles.forEach((particle) => {
-			particle.isClicked = false;
-		});
-	}
-	else{
-		artistParticles.forEach((particle) => {
-			particle.isClicked = false;
-		});
-	}
-	
+	renderParticles.forEach((particle) => {	
+		particle.isClicked = false;	
+	});
 });
 
 svg.addEventListener('mousemove', (e) => {
 	if (mouseDown) {
 		const deltaX = e.clientX - mouseX;
 		const deltaY = e.clientY - mouseY;
-		if(currentType ==="track"){
-			trackParticles.forEach((particle) => {
-				if (particle.isClicked) {
-					particle.vx += deltaX * dragVelocityFactor;
-					particle.vy += deltaY * dragVelocityFactor;
-				}
-			});
-		}
-		else{
-			artistParticles.forEach((particle) => {
-				if (particle.isClicked) {
-					particle.vx += deltaX * dragVelocityFactor;
-					particle.vy += deltaY * dragVelocityFactor;
-				}
-			});
-		}
+		renderParticles.forEach((particle) => {	
+			if (particle.isClicked) {	
+				particle.vx += deltaX * dragVelocityFactor;	
+				particle.vy += deltaY * dragVelocityFactor;	
+			}	
+		});
 		var offset = $('svg').offset();
 		mouseX = e.clientX; 
 		mouseY = e.clientY;
@@ -116,6 +75,7 @@ svg.addEventListener('mousemove', (e) => {
 function random(lb, ub){
   return Math.random()*(ub-lb)+lb;
 }
+let idCnt = 0;
 let imageScale = 1.2;
 let dim = Math.min(width,height);
 class Particle {
@@ -126,7 +86,7 @@ class Particle {
 		this.imageURL = imageURL;
 		this.x = random(this.r, width - this.d);
 		this.y = random(this.r, height - this.d);
-		this.col = '#' + color;
+		this.col = color;
 		this.text = text;
 		this.mass = this.r;
         this.email = email;
@@ -139,7 +99,15 @@ class Particle {
 			r: this.r, 
 			fill: "url(#"+this.imageURL +")",
 		});
-		
+		this.outlineEl = createNode('circle', {
+            cx: this.x,
+            cy: this.y,
+            r: this.r,
+            stroke: this.col, // Use the outline color for the stroke
+            'stroke-width': 5, // You can adjust the outline width as needed
+            fill: 'none', // No fill for the outline
+        });
+        svg.insertBefore(this.outlineEl, this.el);
 		this.el.addEventListener('mousedown', (e) => {
 			mouseDown = true;
 			mouseX = e.clientX;
@@ -161,8 +129,8 @@ class Particle {
 			href: this.imageURL
 		});
 		//add a clip path to this? 
-		if(this.type === "track") this.clipPathID = "circle-clip" + trackParticles.length;
-		else this.clipPathID = "circle-clip" + artistParticles.length;
+		if(this.type === "track") this.clipPathID = "circle-clip" + (idCnt++);
+		else this.clipPathID = "circle-clip" + (idCnt++);
 		this.clipPathEl = createNode('clipPath', { id: this.clipPathID});
 		this.clipCircle = createNode('circle', {
 			cx: this.x,
@@ -210,6 +178,10 @@ class Particle {
 		this.el.setAttribute('r', this.r);
 		this.el.setAttribute('fill', this.collision ? '#000000' : "url(#" + this.imageURL + ") translate(" + this.x + "," + this.y + ")");
 		
+		this.outlineEl.setAttribute('cx', this.x);
+		this.outlineEl.setAttribute('cy', this.y);
+		this.outlineEl.setAttribute('r', this.r);
+
 		const imageX = this.x - this.r * imageScale;
 		const imageY = this.y - this.r * imageScale;
 		this.imageEl.setAttribute('x', imageX);
@@ -304,7 +276,6 @@ class Particle {
 			b.collision = true;
 		}
 	}
-	
 }
 
 
@@ -312,33 +283,63 @@ class Particle {
 //i think we make the track and artist 2d, each time we insert an array of the current particles
 let trackParticles = [];
 let artistParticles = [];
+var renderParticles = [];
 
 
-
+/*
+	to do: make outline visible
+*/
 var trackImages = [];
 var trackNames = [];
 
 var artistImages = [];
 var artistNames = [];
 
-var colorsUsed = [0,0,0,0,0];
-var colors = [
-    "F4C209",
-    "FF8C5A",
-    "FF99AD",
-    "D9A9E2",
-    "4BAA71"
-];
 
-function addUser(email, trackData, artistData){
-    let color = "";
-    for(let i =0; i<5; i++){
-        if(!colorsUsed[i]){
-            color = colors[i];
-            colorsUsed[i] = 1;
-            break;
-        }
+async function fetchData(userEmail) {
+    const url = '/fetch-user';
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    const requestBody = JSON.stringify({ email: userEmail });
+    const requestOptions = {
+        method: 'POST',
+        headers: headers,
+        body: requestBody
+    };
+
+    try {
+        const response = await fetch(url, requestOptions);
+        const data = await response.json();
+        return data; // Return the fetched data
+    } catch (error) {
+        console.error('Error:', error);
+        throw error; // Rethrow the error
     }
+}
+const profilePictures = document.querySelectorAll('.profile-picture');
+profilePictures.forEach(async profilePicture => {//looping through all the shareUsers
+    const userColor = profilePicture.getAttribute('data-color');
+    const userEmail = profilePicture.getAttribute('data-email');
+
+    // Now you can use the userColor and userEmail values in your JavaScript logic
+    console.log('User color:', userColor);
+    console.log('User email:', userEmail);
+
+	try {
+		var data = await fetchData(userEmail);
+		console.log(data);
+		var tracks = data.tracks;
+		var artists = data.artists;
+		addUser(userEmail, tracks, artists, userColor);
+		addParticles();
+	} catch (error) {
+		console.error('Error fetching data:', error);
+	}
+});
+
+function addUser(email, trackData, artistData, color){
+    
     var tracks = [];
     var artists = [];
 
@@ -362,7 +363,14 @@ function addUser(email, trackData, artistData){
             trackNames.push(name);
         }
         for(let i =0; i<5; i++){
-            tracks.push(new Particle((dim/4) / Math.sqrt(tracks.length + 1), trackImages[tracks.length].src, trackNames[tracks.length], "track", color, email));
+            tracks.push({
+				dim: (dim/4) / Math.sqrt(tracks.length + 1), 
+				img: trackImages[tracks.length].src, 
+				name: trackNames[tracks.length], 
+				type: "track", 
+				color: color, 
+				email: email
+			});
         }
     }
     if(1){
@@ -379,10 +387,22 @@ function addUser(email, trackData, artistData){
             artistNames.push(name);
         }
         for(let i =0; i<5; i++){
-            artists.push(new Particle((dim/4) / Math.sqrt(artists.length + 1), artistImages[artists.length].src, artistNames[artists.length], "artist", color, email));
+            artists.push({
+				dim: (dim/4) / Math.sqrt(artists.length + 1), 
+				img: artistImages[artists.length].src, 
+				name: artistNames[artists.length], 
+				type: "artist", 
+				color: color, 
+				email: email
+			});
         }
     }
+	trackParticles.push(tracks);
+	artistParticles.push(artists);
 }
+
+// Apply the outline color to the profile pictures
+
 function removeUser(email){
     for(let i =0; i<trackParticles.length; i++){
         if(trackParticles[i][0].email === email){
@@ -408,20 +428,62 @@ function removeUser(email){
 }
 
 // animation loop
+/*
+	what if we just have group of particles we call render?
+		separates the user add/remove from render
+*/
+function removeNode(obj){	
+	svg.removeChild(obj);	
+}	
+async function removeParticles(){
+	while(1){
+		if(renderParticles.length ===0) break;	
+		var obj = renderParticles.pop();	
+		removeNode(obj.imageEl);	
+		removeNode(obj.clipPathEl);	
+		removeNode(obj.textEl);	
+		removeNode(obj.overlayEl);	
+		removeNode(obj.el);	
+	}
+}
+async function addParticles(){//were already storing them
+	renderParticles = [];
+	if(currentType === "track"){
+		for(let i =0; i< trackParticles.length; i++){
+			for(let j =0; j<trackParticles[i].length; j++){
+				var obj = trackParticles[i][j];
+				renderParticles.push(new Particle (obj.dim, obj.img, obj.name, obj.type, obj.color, obj.email));
+			}
+		}
+	}
+	else{
+		for(let i =0; i< artistParticles.length; i++){
+			for(let j =0; j<artistParticles[i].length; j++){
+				var obj = artistParticles[i][j];
+				renderParticles.push(new Particle (obj.dim, obj.img, obj.name, obj.type, obj.color, obj.email));
+			}
+		}
+	}
+}
 
 const trackButton = document.getElementById("trackShareButton");
 const artistButton = document.getElementById("artistShareButton");
+trackButton.classList.add('active');
 
 trackButton.addEventListener("click", () => {
 	trackButton.classList.add("active");
     artistButton.classList.remove("active");
+	removeParticles();
 	currentType = "track";
+	addParticles();
 });
 
 artistButton.addEventListener("click", () => {
 	artistButton.classList.add("active");
     trackButton.classList.remove("active");
+	removeParticles();
 	currentType = "artist";
+	addParticles();
 });
 
 
@@ -432,52 +494,21 @@ const loop = () => {
 
 	setSvgSize(width, height);
 	dim = Math.min(width,height);
-	for(let i =0; i < trackParticles.length; i++){
-        for(let j =0; j < trackParticles[i].length; j++){
-            trackParticles[i][j].r = (dim/4) / Math.sqrt(j+1);
-        }
-	}
-	for(let i =0; i < artistParticles.length; i++){
-        for(let j =0; j < artistParticles[i].length; j++){
-            artistParticles[i][j].r = (dim/4) / Math.sqrt(j+1);
-        }
-	}
 	// looping through particles checking for collisions and updating pos
-	if(currentType === "track"){
-        for(let u1 =0; u1<trackParticles.length; u1++){
-            for(let u2 =0; u2 < trackParticles.length; u2++){
-                for(let i =0; i<trackParticles[u1].length; i++){
-                    for(let j =0; j<trackParticles[u2].length; j++){
-                        if(u1 === u2 && i ===j) continue;
-                        trackParticles[u1][i].checkForIntercept(trackParticles[u2][j]);
-                    }
-                    trackParticles[u1][i].update();
-                }
-            }
-            
-        }
+	for(let i =0; i < renderParticles.length; i++){
+		renderParticles[i].r = (dim/4) / Math.sqrt(i+1);
 	}
-	else{
-		for(let u1 =0; u1<artistParticles.length; u1++){
-            for(let u2 =0; u2 < artistParticles.length; u2++){
-                for(let i =0; i<artistParticles[u1].length; i++){
-                    for(let j =0; j<artistParticles[u2].length; j++){
-                        if(u1 === u2 && i ===j) continue;
-                        artistParticles[u1][i].checkForIntercept(artistParticles[u2][j]);
-                    }
-                    artistParticles[u1][i].update();
-                }
-            }
-            
-        }
+	for(let i =0; i<renderParticles.length; i++){
+		for(let j =i+1; j<renderParticles.length; j++){
+			renderParticles[i].checkForIntercept(renderParticles[j]);
+		}
+		renderParticles[i].update();
 	}
 	window.requestAnimationFrame(loop);
 }
 
 loop();
 
-
-// share.js
 
 
 // share.js
@@ -510,11 +541,10 @@ addUserForm.addEventListener('submit', function(event) {
 	});
 });
 
-const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-checkboxes.forEach(checkbox => {
-	checkbox.addEventListener('change', function() {
-		const email = this.value;
-		console.log(`Delete button clicked for email: ${email}`);
-		
+const svgButtons = document.querySelectorAll(".svg-button");
+svgButtons.forEach(button => {
+	button.addEventListener("click", () => {
+		button.closest("form").submit();
 	});
 });
+
