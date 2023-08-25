@@ -1,4 +1,4 @@
-var client_id = 'CLIEINT ID'; // Your client id
+var client_id = 'ID'; // Your client id
 var client_secret = 'SECRET'; // Your secret
 var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
 
@@ -17,7 +17,7 @@ mongoose.connect("mongodb+srv://admin-william:test123@cluster0.mjnvgtd.mongodb.n
 
 const userSchema = {
   email: String,
-  spotifyData: { type: mongoose.Schema.Types.Mixed } // Store the entire JSON response
+  spotifyData: { type: mongoose.Schema.Types.Mixed }, // Store the entire JSON response
 }
 const User = mongoose.model('User', userSchema);
 
@@ -62,6 +62,26 @@ var access_token = "";
 var loggedIn = false;
 var userEmail = "";
 var shareUsers= [];
+var colorsUsed = [0,0,0,0,0];
+var colors = [
+    "#F4C209",
+    "#FF8C5A",
+    "#FF99AD",
+    "#D9A9E2",
+    "#4BAA71"
+];
+
+function getColor(){
+  let color = "";
+  for(let i =0; i<5; i++){
+    if(!colorsUsed[i]){
+      color = colors[i];
+      colorsUsed[i] = 1;
+      break;
+    } 
+  } 
+  return color;
+}
 app.get('/login', function(req, res) {
   console.log("pressed");
   var state = generateRandomString(16);
@@ -82,6 +102,7 @@ app.get('/login', function(req, res) {
 app.get('/token', function (req, res){
   res.send(access_token);
 })
+
 app.get('/callback', function(req, res) {//after we are authorized, we are redirected to redirectURI, currently callback
 
   // your application requests refresh and access tokens
@@ -130,8 +151,14 @@ app.get('/callback', function(req, res) {//after we are authorized, we are redir
             return;
           }
           userEmail = body.email;
-          shareUsers.push(userEmail);
-          console.log(userEmail);
+          var pfpLink = body.images[0].url;
+          const userObject = {
+            email: userEmail,
+            pfp: pfpLink,
+            color: getColor(),
+            name: body.display_name
+          }
+          shareUsers.push(userObject);
         });
       } 
       else {
@@ -195,7 +222,7 @@ app.get('/fetch-data', async function(req, res) {
               // User doesn't exist, create a new user
               const newUser = new User({
                 email: combinedData.email,
-                spotifyData: combinedData
+                spotifyData: combinedData,
               });
 
               newUser.save()
@@ -260,7 +287,7 @@ app.get('/share', function(req,res){//need to check if we are logged in
   }
   else {
     console.log(shareUsers);
-    res.render("share.ejs", {emails: shareUsers});// , {name: {stuff ur sending over}}
+    res.render("share.ejs", {user: shareUsers});// , {name: {stuff ur sending over}}
   }
 });
 
@@ -279,20 +306,43 @@ app.post('/fetch-user', function(req,res){
     });
 })
 
-app.post("/addUser", function(req,res){
+
+
+app.post("/addUser", async function(req,res){
   console.log(req.body);
-  const email = req.body.newUserEmail;
+  const newEmail = req.body.newUserEmail.trim();
   
-  if (shareUsers.includes(email)) {
-    return res.status(200).json({ message: "User already exists" });
+  for(let i =0; i<shareUsers.length; i++){
+    if(shareUsers[i].email === newEmail) return res.status(200).json({ message: "User already exists" });
   }
   //need to check if user exists or not before pushing
   //if they dont exist, make a pop up?
   //if dont exist
-
-  shareUsers.push(email);
-  console.log("redirecting");
-  res.status(200).json({ message: "User added successfully" });
+  User.find({}, function(err, users){
+    users.forEach(function(user) {
+      console.log(user);
+    });
+  });
+  try {
+    // Check if the user exists in the database
+    const user = await User.findOne({ email: newEmail }).exec();
+    if (user) {
+      const userObject = {
+          email: newEmail,
+          pfp: user.spotifyData.pfp, 
+          color: getColor(),
+          name: user.spotifyData.userName
+      };
+      shareUsers.push(userObject);
+      return res.status(200).json({ message: "User added successfully" });
+    } else {
+        console.log("User not found");
+        return res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    console.error("Error occurred:", error);
+    return res.status(500).json({ message: "An error occurred." });
+  }
 })
 
 app.post("/deleteUser", function(req,res){
@@ -300,7 +350,13 @@ app.post("/deleteUser", function(req,res){
   const email = req.body.email;
   
   for(let i =0; i<shareUsers.length; i++){
-    if(shareUsers[i] === email){
+    if(shareUsers[i].email === email){
+      for(let j =0; j<5; j++){
+        if(shareUsers[i].color === colors[j]){
+          colorsUsed[j] = 0;
+          break;
+        }
+      }
       shareUsers.splice(i,1);
     }
   }
