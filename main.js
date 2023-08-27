@@ -1,5 +1,3 @@
-import './style.css'
-
 var script = document.createElement('script');
 script.src = 'https://code.jquery.com/jquery-3.6.3.min.js';
 document.getElementsByTagName('head')[0].appendChild(script);
@@ -316,12 +314,11 @@ class Particle {
 let trackParticles = [];
 let artistParticles = [];
 
-const apiURL = "http://localhost:8888";
+const apiURL = "https://bubbli.williamlin.maillew.com";
 async function getAccessToken(){
 	try {
 		const response = await fetch(apiURL + '/token');
 		const data = await response.text();
-		console.log("getAccessToken " + data);
 		return data;
 	} catch (error) {
 		console.error('Error fetching data:', error);
@@ -334,15 +331,12 @@ async function fetchData() {
 	try {
 		const response = await fetch(apiURL + '/fetch-data?access_token=' + accessToken);
 		const data = await response.json();
-		console.log(data);
 		return data;
 	} catch (error) {
 		console.error('Error fetching data:', error);
 	}
 }
 //we are running simultaneously, but same timeline; so accessToken doesnt get updated
-fetchData();
-
 
 var trackImages = [];
 var trackNames = [];
@@ -355,13 +349,13 @@ var artistPopularity = [];
 var artistGenres = [];
 
 const data = await fetchData();
+const email = data.email;
 const tracks = data.tracks;
 const artists = data.artists;
 initTracks(tracks);
 initArtists(artists);
 
 function initTracks(profile) {
-    console.log(profile);
 	for(let i =0; i<20; i++) addTrack(profile);
 }
 
@@ -387,7 +381,6 @@ function addTrack(profile){
 }
 
 function initArtists(profile) {
-    console.log(profile);
 	for(let i =0; i<20; i++) addArtist(profile);
 }
 
@@ -430,8 +423,8 @@ function removeParticle(type){//removes num smallest particles
 	}
 }
 function addParticle(type){//adds next num largest particles
-	if(type ==="track") trackParticles.push(new Particle((dim/4) / Math.sqrt(trackParticles.length + 1), trackImages[trackParticles.length].src, trackNames[trackParticles.length], "track"));
-	else artistParticles.push(new Particle((dim/4) / Math.sqrt(artistParticles.length + 1), artistImages[artistParticles.length].src, artistNames[artistParticles.length], "artist"));
+	if(type ==="track") trackParticles.push(new Particle((dim/4.7) / Math.sqrt(trackParticles.length + 1), trackImages[trackParticles.length].src, trackNames[trackParticles.length], "track"));
+	else artistParticles.push(new Particle((dim/4.7) / Math.sqrt(artistParticles.length + 1), artistImages[artistParticles.length].src, artistNames[artistParticles.length], "artist"));
 }
 function adjustSize(sz, type){
 	if(type === "track"){
@@ -511,10 +504,10 @@ const loop = () => {
 	setSvgSize(width, height);
 	dim = Math.min(width,height);
 	for(let i =0; i < trackParticles.length; i++){
-		trackParticles[i].r = (dim/4) / Math.sqrt(i+1);
+		trackParticles[i].r = (dim/4.7) / Math.sqrt(i+1);
 	}
 	for(let i =0; i < artistParticles.length; i++){
-		artistParticles[i].r = (dim/4) / Math.sqrt(i+1);
+		artistParticles[i].r = (dim/4.7) / Math.sqrt(i+1);
 	}
 	// looping through particles checking for collisions and updating pos
 	if(currentType === "track"){
