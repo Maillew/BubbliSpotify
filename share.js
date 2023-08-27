@@ -171,7 +171,6 @@ class Particle {
 		svg.appendChild(this.textEl);
 	}
 	draw() {
-		if(this.isClicked) console.log(this.text);
 		this.fontsize = Math.max(10, 2.5*this.r/this.text.length);
 		this.el.setAttribute('cx', this.x);
 		this.el.setAttribute('cy', this.y);
@@ -214,8 +213,8 @@ class Particle {
 			this.x = this.x <= this.r ? this.r : width - this.r;
 			this.vx *= -1;
 		}
-		if (this.y <= this.r || this.y + this.r + this.fontsize > height) {
-			this.y = this.y <= this.r ? this.r : height - this.r - this.fontsize;
+		if (this.y <= this.r || this.y + this.r> height) {
+			this.y = this.y <= this.r ? this.r : height - this.r;
 			this.vy *= -1;
 		}
 		this.imageEl.setAttribute('x', this.x - this.r * imageScale);
@@ -364,7 +363,7 @@ function addUser(email, trackData, artistData, color){
         }
         for(let i =0; i<5; i++){
             tracks.push({
-				dim: (dim/4) / Math.sqrt(tracks.length + 1), 
+				dim: (dim) / Math.sqrt(tracks.length + 1), 
 				img: trackImages[tracks.length].src, 
 				name: trackNames[tracks.length], 
 				type: "track", 
@@ -388,7 +387,7 @@ function addUser(email, trackData, artistData, color){
         }
         for(let i =0; i<5; i++){
             artists.push({
-				dim: (dim/4) / Math.sqrt(artists.length + 1), 
+				dim: (dim) / Math.sqrt(artists.length + 1), 
 				img: artistImages[artists.length].src, 
 				name: artistNames[artists.length], 
 				type: "artist", 
@@ -444,15 +443,17 @@ async function removeParticles(){
 		removeNode(obj.textEl);	
 		removeNode(obj.overlayEl);	
 		removeNode(obj.el);	
+		removeNode(obj.outlineEl);	
 	}
 }
 async function addParticles(){//were already storing them
-	renderParticles = [];
+	removeParticles();
 	if(currentType === "track"){
 		for(let i =0; i< trackParticles.length; i++){
 			for(let j =0; j<trackParticles[i].length; j++){
 				var obj = trackParticles[i][j];
-				renderParticles.push(new Particle (obj.dim, obj.img, obj.name, obj.type, obj.color, obj.email));
+				console.log(i+ " dim " +obj.dim);
+				renderParticles.push(new Particle (obj.dim/6, obj.img, obj.name, obj.type, obj.color, obj.email));
 			}
 		}
 	}
@@ -460,7 +461,7 @@ async function addParticles(){//were already storing them
 		for(let i =0; i< artistParticles.length; i++){
 			for(let j =0; j<artistParticles[i].length; j++){
 				var obj = artistParticles[i][j];
-				renderParticles.push(new Particle (obj.dim, obj.img, obj.name, obj.type, obj.color, obj.email));
+				renderParticles.push(new Particle (obj.dim/6, obj.img, obj.name, obj.type, obj.color, obj.email));
 			}
 		}
 	}
@@ -496,7 +497,7 @@ const loop = () => {
 	dim = Math.min(width,height);
 	// looping through particles checking for collisions and updating pos
 	for(let i =0; i < renderParticles.length; i++){
-		renderParticles[i].r = (dim/4) / Math.sqrt(i+1);
+		renderParticles[i].r = (dim/6) / Math.sqrt((i%5)+1);
 	}
 	for(let i =0; i<renderParticles.length; i++){
 		for(let j =i+1; j<renderParticles.length; j++){
