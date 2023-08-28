@@ -2,8 +2,6 @@ var script = document.createElement('script');
 script.src = 'https://code.jquery.com/jquery-3.6.3.min.js';
 document.getElementsByTagName('head')[0].appendChild(script);
 
-const clientId = "b86a837e66bf413f9e5dfe56b233e1e3"; // Replace with your client id
-
 // set up svg width
 let height = document.getElementById('svg').clientHeight, width = document.getElementById('svg').clientWidth;
 let svg = document.getElementById('svg');
@@ -314,28 +312,33 @@ class Particle {
 let trackParticles = [];
 let artistParticles = [];
 
-const apiURL = "https://bubbli.williamlin.maillew.com";
-async function getAccessToken(){
-	try {
-		const response = await fetch(apiURL + '/token');
-		const data = await response.text();
-		return data;
-	} catch (error) {
-		console.error('Error fetching data:', error);
-	}
-}
+
+const userDataElement = document.getElementById("user-data");
+const userEmail = userDataElement.getAttribute("data-user-email");
+console.log("User Email:", userEmail);
 
 async function fetchData() {
-	const accessToken = await getAccessToken();
-	console.log("in fetch " + accessToken);
-	try {
-		const response = await fetch(apiURL + '/fetch-data?access_token=' + accessToken);
-		const data = await response.json();
-		return data;
-	} catch (error) {
-		console.error('Error fetching data:', error);
-	}
+    const url = '/fetch-user';
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    const requestBody = JSON.stringify({ email: userEmail });
+    const requestOptions = {
+        method: 'POST',
+        headers: headers,
+        body: requestBody
+    };
+
+    try {
+        const response = await fetch(url, requestOptions);
+        const data = await response.json();
+        return data; // Return the fetched data
+    } catch (error) {
+        console.error('Error:', error);
+        throw error; // Rethrow the error
+    }
 }
+
 //we are running simultaneously, but same timeline; so accessToken doesnt get updated
 
 var trackImages = [];
@@ -352,6 +355,11 @@ const data = await fetchData();
 const email = data.email;
 const tracks = data.tracks;
 const artists = data.artists;
+
+
+
+  
+
 initTracks(tracks);
 initArtists(artists);
 
