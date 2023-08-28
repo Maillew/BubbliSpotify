@@ -42,30 +42,30 @@ var generateRandomString = function(length) {
 var stateKey = 'spotify_auth_state';
 
 var app = express();
-
-app.use(cors({
-      origin: 'http://localhost:5173',
-    }))
-   .use(express.static(__dirname))
-   .use(cookieParser())
-   .use(bodyParser.urlencoded({extended: true}))
-   .use(bodyParser.json());
 const secretKey = crypto.randomBytes(32).toString('hex');
-
 app.use(session({
   secret: secretKey,
   resave: false,
   saveUninitialized: true
 }));
 
-app.get('/', (req, res) =>{
+app.use(express.static(__dirname))
+   .use(cookieParser())
+   .use(bodyParser.urlencoded({extended: true}))
+   .use(bodyParser.json());
+app.set('view engine', 'ejs'); // Setting EJS as the view engine
+
+
+
+app.get('/', (req, res) =>{ //we have an issue if we are on index.ejs, and we rerender index.ejs
   res.render("index.ejs");
 });
+
 app.get('/user', (req, res) => {
   if (!req.session.loggedIn) {
     res.redirect("/login");
   } else {
-    res.render("user.ejs"); // Display user-specific data
+    res.render("user.ejs", {userEmail: req.session.userEmail}); // Display user-specific data
   }
 });
 var access_token = "";
@@ -137,37 +137,98 @@ app.get('/callback', function(req, res) {//after we are authorized, we are redir
         req.session.shareUsers = [];
         req.session.colorsUsed = [0,0,0,0,0];
 
-        console.log(req.session);
-        res.redirect("/user");
+        var options = {
+          url: 'https://api.spotify.com/v1/me/top/tracks',
+          headers: { 'Authorization': 'Bearer ' + access_token },
+          json: true
+        };
+        var options2 = {
+          url: 'https://api.spotify.com/v1/me/top/artists',
+          headers: { 'Authorization': 'Bearer ' + access_token },
+          json: true
+        };
         var options3 = {
           url: 'https://api.spotify.com/v1/me',
           headers: { 'Authorization': 'Bearer ' + access_token },
           json: true
         }
-        request.get(options3, async function(error, response, body) {
-          if(error && response.statusCode !== 200) {
+    
+        request.get(options, async function(error, response, trackData) {
+          if (error && response.statusCode !== 200) {
             res.status(response.statusCode).json({ error: 'invalid-token' });
             return;
           }
-          userEmail = body.email;
-          req.session.userEmail = body.email;
-          var pfpLink = "/views/defaultpfp.jpg";
-          if(body.images.length) pfpLink = body.images[0].url;
-          let c = "";
-          for(let i =0; i<5; i++){
-            if(!req.session.colorsUsed[i]){
-              c = colors[i];
-              req.session.colorsUsed[i] = 1;
-              break;
-            } 
-          } 
-          const userObject = {
-            email: userEmail,
-            pfp: pfpLink,
-            color: c,
-            name: body.display_name.split(" ")[0]
-          }
-          req.session.shareUsers.push(userObject);
+          request.get(options2, async function(error, response, artistData) {
+            if(error && response.statusCode !== 200) {
+              res.status(response.statusCode).json({ error: 'invalid-token' });
+              return;
+            }
+            request.get(options3, async function(error, response, body) {
+              if(error && response.statusCode !== 200) {
+                res.status(response.statusCode).json({ error: 'invalid-token' });
+                return;
+              }
+              userEmail = body.email;
+              req.session.userEmail = body.email;
+              console.log(req.session.userEmail);
+              var pfpLink = "/views/defaultpfp.jpg";
+              if(body.images.length) pfpLink = body.images[0].url;
+              let c = "";
+              for(let i =0; i<5; i++){
+                if(!req.session.colorsUsed[i]){
+                  c = colors[i];
+                  req.session.colorsUsed[i] = 1;
+                  break;
+                } 
+              } 
+              const userObject = {
+                email: userEmail,
+                pfp: pfpLink,
+                color: c,
+                name: body.display_name.split(" ")[0]
+              }
+              req.session.shareUsers.push(userObject);
+
+              const combinedData = {
+                email: body.email, 
+                pfp: pfpLink, 
+                userName: body.display_name.split(" ")[0], 
+                tracks: trackData, 
+                artists: artistData
+              };
+              //add info to database here
+              User.findOne({ email: combinedData.email })
+              .then(existingUser => {
+                if (!existingUser) {
+                  const newUser = new User({
+                    email: combinedData.email,
+                    spotifyData: combinedData,
+                  });
+                  newUser.save()
+                    .then(() => {
+                      console.log('New user data saved with email: ' + combinedData.email);
+                    })
+                    .catch(error => {
+                      console.error('Error saving new user data:', error);
+                    });
+                } else {
+                  // User exists, update their data
+                  existingUser.spotifyData = combinedData;
+                  existingUser.save()
+                    .then(() => {
+                      console.log('Existing user data updated with email ' + combinedData.email);
+                    })
+                    .catch(error => {
+                      console.error('Error updating existing user data:', error);
+                    });
+                }
+              })
+              .catch(error => {
+                console.error('Error finding user:', error);
+              });
+              res.redirect("/user");
+            });
+          });
         });
       } 
       else {
@@ -176,96 +237,6 @@ app.get('/callback', function(req, res) {//after we are authorized, we are redir
     });
   }
 });
-
-app.get('/fetch-data', async function(req, res) {
-  try {
-    const access_token = req.session.access_token; // Get access token from query parameter
-    if (!access_token) {
-      res.status(400).json({ error: 'Missing access_token' });
-      return;
-    }
-
-    var options = {
-      url: 'https://api.spotify.com/v1/me/top/tracks',
-      headers: { 'Authorization': 'Bearer ' + access_token },
-      json: true
-    };
-    var options2 = {
-      url: 'https://api.spotify.com/v1/me/top/artists',
-      headers: { 'Authorization': 'Bearer ' + access_token },
-      json: true
-    };
-    var options3 = {
-      url: 'https://api.spotify.com/v1/me',
-      headers: { 'Authorization': 'Bearer ' + access_token },
-      json: true
-    }
-
-    request.get(options, async function(error, response, trackData) {
-      if (error && response.statusCode !== 200) {
-        res.status(response.statusCode).json({ error: 'invalid-token' });
-        return;
-      }
-      request.get(options2, async function(error, response, artistData) {
-        if(error && response.statusCode !== 200) {
-          res.status(response.statusCode).json({ error: 'invalid-token' });
-          return;
-        }
-        request.get(options3, async function(error, response, body) {
-          if(error && response.statusCode !== 200) {
-            res.status(response.statusCode).json({ error: 'invalid-token' });
-            return;
-          }
-          var pfpLink = "/views/defaultpfp.jpg";
-          if(body.images.length) pfpLink = body.images[0].url;
-          const combinedData = {
-            email: body.email, 
-            pfp: pfpLink, 
-            userName: body.display_name.split(" ")[0], 
-            tracks: trackData, 
-            artists: artistData
-          };
-          res.json(combinedData);
-          //add info to database here
-          User.findOne({ email: combinedData.email })
-          .then(existingUser => {
-            if (!existingUser) {
-              // User doesn't exist, create a new user
-              const newUser = new User({
-                email: combinedData.email,
-                spotifyData: combinedData,
-              });
-
-              newUser.save()
-                .then(() => {
-                  console.log('New user data saved with email: ' + combinedData.email);
-                })
-                .catch(error => {
-                  console.error('Error saving new user data:', error);
-                });
-            } else {
-              // User exists, update their data
-              existingUser.spotifyData = combinedData;
-              existingUser.save()
-                .then(() => {
-                  console.log('Existing user data updated with email ' + combinedData.email);
-                })
-                .catch(error => {
-                  console.error('Error updating existing user data:', error);
-                });
-            }
-          })
-          .catch(error => {
-            console.error('Error finding user:', error);
-          });
-        });
-      });
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'server-error' });
-  }
-});
-
 
 app.get('/share', function(req,res){//need to check if we are logged in
   if(!req.session.loggedIn){
