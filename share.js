@@ -317,6 +317,8 @@ async function fetchData(userEmail) {
     }
 }
 const profilePictures = document.querySelectorAll('.profile-picture');
+console.log("profile length " + profilePictures.length);
+const numUsers = profilePictures.length;
 profilePictures.forEach(async profilePicture => {//looping through all the shareUsers
     const userColor = profilePicture.getAttribute('data-color');
     const userEmail = profilePicture.getAttribute('data-email');
@@ -453,7 +455,7 @@ async function addParticles(){//were already storing them
 			for(let j =0; j<trackParticles[i].length; j++){
 				var obj = trackParticles[i][j];
 				console.log(i+ " dim " +obj.dim);
-				renderParticles.push(new Particle (obj.dim/6, obj.img, obj.name, obj.type, obj.color, obj.email));
+				renderParticles.push(new Particle (obj.dim/(numUsers+4), obj.img, obj.name, obj.type, obj.color, obj.email));
 			}
 		}
 	}
@@ -461,7 +463,7 @@ async function addParticles(){//were already storing them
 		for(let i =0; i< artistParticles.length; i++){
 			for(let j =0; j<artistParticles[i].length; j++){
 				var obj = artistParticles[i][j];
-				renderParticles.push(new Particle (obj.dim/6, obj.img, obj.name, obj.type, obj.color, obj.email));
+				renderParticles.push(new Particle (obj.dim/(numUsers+4), obj.img, obj.name, obj.type, obj.color, obj.email));
 			}
 		}
 	}
@@ -497,7 +499,7 @@ const loop = () => {
 	dim = Math.min(width,height);
 	// looping through particles checking for collisions and updating pos
 	for(let i =0; i < renderParticles.length; i++){
-		renderParticles[i].r = (dim/6) / Math.sqrt((i%5)+1);
+		renderParticles[i].r = (dim/(numUsers+4)) / Math.sqrt((i%5)+1);
 	}
 	for(let i =0; i<renderParticles.length; i++){
 		for(let j =i+1; j<renderParticles.length; j++){
