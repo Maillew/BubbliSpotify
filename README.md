@@ -1,4 +1,4 @@
-![image](https://github.com/Maillew/BubbliSpotify/assets/63217833/1ff39d23-819d-46f4-9077-4076bf1d2f0b)# BubbliSpotify
+# BubbliSpotify
 Bubbli Spotify, a fun website to share and compare your Spotify Data with friends! 
 
 # Getting Started
